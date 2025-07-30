@@ -7,7 +7,8 @@
     "1": "node src/ibc_backwall/ibc_backwall.js",
     "2": "node src/techworks_tab/techworks_tab.js",
     "3": "node src/techworks_backwall/techworks_backwall.js",
-    "4": "node src/digi_quad/digi_quad.js"
+    "4": "node src/digi_quad/digi_quad.js",
+    "5": "node src/squad_360/squad_360.js"
   },
   "keywords": [],
   "author": "",

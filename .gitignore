@@ -131,6 +131,8 @@ dist
 
 # IBC Cubes reports folder
 src/ibc_backwall/ibc-backwall-daily-files
+src/squad_360/squad-360-daily-files
+
 src/ibc_backwall/ibc-backwall-logs
 
 
