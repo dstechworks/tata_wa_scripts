@@ -616,7 +616,11 @@ async function startScript() {
 
 
         /////////------------------------------- Send National Message ----------------------------/////////
-        let messageBodyNP = `NATIONAL DIGI-QUAD STATUS\nWest : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)\nNorth : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)\nEast : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)\nSouth : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)`;
+        let messageBodyNP = `NATIONAL TECHWORKS-BACKWALL STATUS
+North : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)
+South : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)
+East  : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)
+West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         console.log(messageBodyNP, "\n");
 
         await delay(7000);
@@ -635,7 +639,7 @@ async function startScript() {
         console.log('*************************** National Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
         // await delay(1000);
-        
+
 
         ////////-------------------------------- Send District Message ----------------------------/////////
         // console.log(allBranches);
