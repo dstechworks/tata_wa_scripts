@@ -132,6 +132,7 @@ dist
 # IBC Cubes reports folder
 src/ibc_backwall/ibc-backwall-daily-files
 src/ibc_backwall/ibc-backwall-logs
+techworks-tab-logs
 
 
 credentials.json
