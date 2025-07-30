@@ -620,7 +620,7 @@ async function sendMessage() {
         console.log("TOTAL MESSAGE COUNT = ", tabTotalCount);
         await delay(2000);
 
-return;
+
 
 
         ////////-------------------------------- Send District Message ----------------------------/////////
