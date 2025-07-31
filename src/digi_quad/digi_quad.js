@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils.js');
-const { delay, nameHelper, numberHelper, areAllZonesZero } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper } = require('../utils/helpers.js');
 const moment = require('moment-timezone');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
@@ -172,14 +172,6 @@ async function startScript() {
             return temp
         }
 
-        function conditionChecker(x) {
-            if (nameHelper(x['AM Name']) && numberHelper(x['AM Mobile No']) && nameHelper(x['Assistant Name']) && numberHelper(x['Assistant Mobile No'])) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-
         console.log("\n");
         console.table({
             "Total Number of Devices found in Base Sheet ": baseDataSheet.length,
@@ -292,7 +284,7 @@ async function startScript() {
                 });
             }
 
-            if (!aeName || !conditionChecker(x)) return;
+            if (!aeName || !conditionCheckerHelper(x)) return;
 
             // Initialize AE
             if (!AEDevice[aeName]) {

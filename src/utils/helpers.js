@@ -20,6 +20,14 @@ function numberHelper(x) {
     return undefined;
 }
 
+function conditionCheckerHelper(x) {
+    if (nameHelper(x['AM Name']) && numberHelper(x['AM Mobile No']) && nameHelper(x['Assistant Name']) && numberHelper(x['Assistant Mobile No'])) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 function areAllZonesZero(zone) {
     return (
         zone.N?.active === 0 && zone.N?.inactive === 0 &&
@@ -29,4 +37,4 @@ function areAllZonesZero(zone) {
     );
 }
 
-module.exports = { delay, nameHelper, numberHelper, areAllZonesZero };
+module.exports = { delay, nameHelper, numberHelper, conditionCheckerHelper, areAllZonesZero };

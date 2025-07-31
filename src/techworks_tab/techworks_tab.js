@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils');
-const { delay, nameHelper, numberHelper, areAllZonesZero } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper } = require('../utils/helpers.js');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
 const path = require('path');
@@ -173,14 +173,6 @@ async function sendMessage() {
             return temp
         }
 
-        function conditionChecker(x) {
-            if (nameHelper(x['AM Name']) && numberHelper(x['AM Mobile No']) && nameHelper(x['Assistant Name']) && numberHelper(x['Assistant Mobile No'])) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-
         // console.log("\n");
         // console.table({
         //     "Total Number of Devices found in Base Sheet ": baseDataSheet.length,
@@ -263,7 +255,7 @@ async function sendMessage() {
                 allBranches[x['Branch']].inactive = 0
                 allBranches[x['Branch']].total = 0
 
-                if (conditionChecker(x)) {
+                if (conditionCheckerHelper(x)) {
                     AEDevice[x['AE Name']] = []
                     AEDevice[x['AE Name']]['Total Count'] = 0
                     AEDevice[x['AE Name']]['Active Count'] = 0
@@ -299,7 +291,7 @@ async function sendMessage() {
 
 
         mergeAllData().forEach(x => {
-            if (AEDevice[x['AE Name']] && x['Branch'] && conditionChecker(x)) {
+            if (AEDevice[x['AE Name']] && x['Branch'] && conditionCheckerHelper(x)) {
                 allBranches[x['Branch']].total++
                 AEDevice[x['AE Name']]['Total Count']++
                 if (x.Status == 'Active') {
