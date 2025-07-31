@@ -1,8 +1,8 @@
+const { saveDataToExcel } = require('../utils/saveExcelUtils');
+const { delay, areAllZonesZero } = require('../utils/helpers');
 const moment = require('moment-timezone');
 const axios = require('axios');
 const path = require('path');
-const xlsx = require('xlsx');
-const fs = require('fs');
 require('dotenv').config();
 
 // Logger Intialize
@@ -14,12 +14,6 @@ let authToken = process.env.AUTH_TOKEN;
 let listOfAssistant = [
     { "Branch": "NDEL", "Assistant Name": "Kunal Tiberwal", "Assistant Mobile No": "8017970345" }
 ];
-
-function delay(milliseconds) {
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
-}
 
 // Function to get access token
 async function getAccessToken() {
@@ -148,30 +142,6 @@ function filterAndFormatScreens(screens, screensStatus, displayStatus, screenTyp
         };
     });
 }
-
-const saveDataToExcel = async (data) => {
-    try {
-        const folderPath = path.join(__dirname, 'squad-360-daily-files');
-
-        // Ensure the folder exists
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath);
-        }
-
-        const formattedDate = moment().tz('Asia/Kolkata').format('DD-MMM-YYYY-hhA');
-        const fileName = `${formattedDate}.xlsx`;
-        const filePath = path.join(folderPath, fileName);
-
-        const ws = xlsx.utils.json_to_sheet(data);
-        const wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, "Sheet1");
-        xlsx.writeFile(wb, filePath);
-        console.log("\n");
-        console.log(`EXCEL FILE SAVED :: ${fileName}`);
-    } catch (error) {
-        console.error("Error saving data to Excel file:", error);
-    }
-};
 
 function nameHelper(x) {
     if (x && x.toString().trim().length > 0) {
@@ -632,6 +602,11 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
     console.log("\n");
     console.log(messageBodyNP, "\n");
 
+    if (areAllZonesZero(zone)) {
+        console.log('All zones have zero active/inactive counts - stopping script');
+        return;
+    }
+
     await delay(7000);
 
     for (let key in NationalPOCNum) {
@@ -827,7 +802,8 @@ async function main() {
         console.log('Filtered screens count:', formattedScreens.length);
 
         // Save the renamed data to Excel
-        await saveDataToExcel(formattedScreens);
+        const folderPath = path.join(__dirname, 'squad-360-daily-files');
+        await saveDataToExcel(formattedScreens, folderPath);
 
         // Rename keys for the formatted data
         const renamedData = await renameAllKeyNames(formattedScreens);

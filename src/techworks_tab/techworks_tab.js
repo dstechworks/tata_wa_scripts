@@ -1,3 +1,4 @@
+const { areAllZonesZero } = require('../utils/helpers');
 const { google } = require('googleapis');
 const axios = require('axios');
 const { Pool } = require('pg');
@@ -600,8 +601,17 @@ async function sendMessage() {
 
 
         /////////------------------------------- Send National Message ----------------------------/////////
-        let messageBodyNP = `NATIONAL TABLET STATUS\nWest : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)\nNorth : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)\nEast : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)\nSouth : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)`;
+        let messageBodyNP = `NATIONAL TABLET STATUS
+North : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)
+South : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)
+East  : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)
+West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         console.log(messageBodyNP, "\n");
+
+        if (areAllZonesZero(zone)) {
+            console.log('All zones have zero active/inactive counts - stopping script');
+            return;
+        }
 
         await delay(7000);
 

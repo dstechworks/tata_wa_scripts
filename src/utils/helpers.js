@@ -20,4 +20,13 @@ function numberHelper(x) {
     return undefined;
 }
 
-module.exports = { delay, nameHelper, numberHelper };
+function areAllZonesZero(zone) {
+    return (
+        zone.N?.active === 0 && zone.N?.inactive === 0 &&
+        zone.S?.active === 0 && zone.S?.inactive === 0 &&
+        zone.E?.active === 0 && zone.E?.inactive === 0 &&
+        zone.W?.active === 0 && zone.W?.inactive === 0
+    );
+}
+
+module.exports = { delay, nameHelper, numberHelper, areAllZonesZero };

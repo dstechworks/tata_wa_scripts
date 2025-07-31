@@ -1,5 +1,5 @@
 const { nationalMsg, deviceWiseBackwallStatusMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils.js');
-const { delay, nameHelper, numberHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero } = require('../utils/helpers.js');
 const { saveDataToExcel } = require('../utils/saveExcelUtils.js');
 const { google } = require('googleapis');
 const path = require('path');
@@ -297,6 +297,11 @@ South : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)
 East  : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)
 West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         console.log(messageBodyNP, "\n");
+
+        if (areAllZonesZero(zone)) {
+            console.log('All zones have zero active/inactive counts - stopping script');
+            return;
+        }
 
         await delay(10000);
 
