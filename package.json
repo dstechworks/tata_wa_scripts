@@ -9,7 +9,8 @@
     "3": "node src/techworks_backwall/techworks_backwall.js",
     "4": "node src/digi_quad/digi_quad.js",
     "5": "node src/squad_360/squad_360.js",
-    "6": "node src/mpdu_43vertical/mpdu_43vertical.js"
+    "6": "node src/mpdu_43vertical/mpdu_43vertical.js",
+    "7": "node src/magenta_mobility/magenta_mobility.js"
   },
   "keywords": [],
   "author": "",
