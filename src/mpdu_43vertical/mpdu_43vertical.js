@@ -1,3 +1,5 @@
+const { mpduNationalMsg, mpduBranchMsg, vertical43InchNationalMsg, vertical43InchBranchMsg } = require('../utils/whatsappMsgTempUtils');
+const { delay } = require('../utils/helpers');
 const mpduBranchWisePOCNum = require('../utils/constants');
 const querystring = require('querystring');
 const moment = require('moment-timezone');
@@ -5,7 +7,6 @@ const { google } = require('googleapis');
 const { Pool } = require('pg');
 const axios = require('axios');
 const path = require('path');
-require('dotenv').config();
 
 const pool = new Pool({
     user: "postgres",
@@ -22,9 +23,6 @@ let workbookData = {};
 
 // GOOGLE API VARIABLES
 const spreadsheetId = "17ADQ1OvzA2KhHe1TG5eoCdFDqkHFiumuwIdy9jQ3s2M";
-
-let baseUrl = "https://wb.omni.tatatelebusiness.com";
-let authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwaG9uZU51bWJlciI6Iis5MTc4Mjc5NDM0NzYiLCJwaG9uZU51bWJlcklkIjoiNDY0MjgxNDcwMTA3NTA5IiwiaWF0IjoxNzMxNjY2ODE2fQ.kPVMzdR-7atWWHMIj5TgXk17PT3rE2gF3L0WdE8kWSM";
 
 // dates variables
 const previousDate = moment().tz("Asia/Kolkata").subtract(1, 'day');
@@ -67,13 +65,6 @@ let sblrBranchNum = {
 // =================================================================================================
 // GENERIC HELPER FUNCTIONS
 // =================================================================================================
-
-function delay(milliseconds) {
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
-}
-
 const getUniqueByKey = (array, key) => {
     return [...new Set(array.map(item => item[key]))];
 };
@@ -92,17 +83,6 @@ function isEmpty(value) {
         return Object.keys(value).length === 0;
     }
     return false;
-}
-
-async function requestAxios(config) {
-    return await axios.request(config)
-        .then((response) => {
-            let apiData = response.data.id;
-            return apiData;
-        })
-        .catch((error) => {
-            return error
-        });
 }
 
 // Helper function to check if all branches are 0 (Active) / 0 (Inactive)
@@ -222,60 +202,6 @@ async function getBaseDataFromGoogleSheets() {
 // =================================================================================================
 // --- MPDU SCRIPT ---
 // =================================================================================================
-
-async function mpduNationalMsg(phoneNum, dataOfNational) {
-    let variables = JSON.stringify({
-        "to": phoneNum,
-        "type": "template",
-        "template": {
-            "name": "mpdu_for_national",
-            "language": {
-                "code": "en"
-            },
-            "components": [{
-                "type": "body",
-                "parameters": [
-                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
-                    { "type": "text", "text": dataOfNational[0].WBHO.active }, { "type": "text", "text": dataOfNational[0].WBHO.inactive },
-                    { "type": "text", "text": dataOfNational[0].WNAG.active }, { "type": "text", "text": dataOfNational[0].WNAG.inactive },
-                    { "type": "text", "text": dataOfNational[0].WAHM.active }, { "type": "text", "text": dataOfNational[0].WAHM.inactive },
-                    { "type": "text", "text": dataOfNational[0].EVIZ.active }, { "type": "text", "text": dataOfNational[0].EVIZ.inactive },
-                    { "type": "text", "text": dataOfNational[0].SHYD.active }, { "type": "text", "text": dataOfNational[0].SHYD.inactive },
-                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SCHE.active }, { "type": "text", "text": dataOfNational[0].SCHE.inactive },
-                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
-                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
-                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
-                    { "type": "text", "text": dataOfNational[0].NLUC.active }, { "type": "text", "text": dataOfNational[0].NLUC.inactive },
-                    { "type": "text", "text": dataOfNational[0].NEUP.active }, { "type": "text", "text": dataOfNational[0].NEUP.inactive },
-                    { "type": "text", "text": dataOfNational[0].EORI.active }, { "type": "text", "text": dataOfNational[0].EORI.inactive },
-                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
-                    { "type": "text", "text": dataOfNational[0].EGAU.active }, { "type": "text", "text": dataOfNational[0].EGAU.inactive },
-                    { "type": "text", "text": dataOfNational[0].NSAH.active }, { "type": "text", "text": dataOfNational[0].NSAH.inactive },
-                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
-                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
-                    { "type": "text", "text": dataOfNational[0].SKAR.active }, { "type": "text", "text": dataOfNational[0].SKAR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SCOI.active }, { "type": "text", "text": dataOfNational[0].SCOI.inactive },
-                    { "type": "text", "text": dataOfNational[0].SERN.active }, { "type": "text", "text": dataOfNational[0].SERN.inactive }
-                ],
-            },],
-        }
-    });
-
-    let config = { method: 'post', maxBodyLength: Infinity, url: `${baseUrl}/whatsapp-cloud/messages`, headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, data: variables };
-    return await requestAxios(config);
-}
-
-async function mpduBranchMsg(phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
-    let variables = JSON.stringify({
-        "to": phoneNum,
-        "type": "template",
-        "template": { "name": "mpdu_for_branch", "language": { "code": "en" }, "components": [{ "type": "body", "parameters": [{ "type": "text", "text": branchCode }, { "type": "text", "text": branchCounts.active }, { "type": "text", "text": branchCounts.inactive }, { "type": "text", "text": inActiveOutletListStr }], },], }
-    });
-    let config = { method: 'post', maxBodyLength: Infinity, url: `${baseUrl}/whatsapp-cloud/messages`, headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, data: variables };
-    return await requestAxios(config);
-}
-
 async function sendMpduMorningMessage(dbData) {
     console.log("\n--- Starting MPDU Morning Report ---");
     if (workbookData['All Device'] && workbookData['All Device'].length > 0 && dbData.length > 0) {
@@ -310,7 +236,7 @@ async function sendMpduMorningMessage(dbData) {
             console.log("Sending MPDU National Messages...");
             for (let key in NationalPOCNum) {
                 let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await mpduNationalMsg(phoneNum, dataStoreArray);
+                let nationalMsgRes = await mpduNationalMsg("mpdu_for_national", phoneNum, dataStoreArray);
                 console.log(`MPDU National: ${key} ---> ${nationalMsgRes}`);
                 await delay(500);
             }
@@ -324,7 +250,7 @@ async function sendMpduMorningMessage(dbData) {
                     for (const pocName in mpduBranchWisePOCNum[branch]) {
                         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
                         let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let branchMsgRes = await mpduBranchMsg(phoneNum, branch, branchCounts, inActiveOutletListStr);
+                        let branchMsgRes = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, branchCounts, inActiveOutletListStr);
                         console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
                         await delay(500);
                     }
@@ -410,44 +336,6 @@ async function sendMpduEveningMessage(apiData) {
 // =================================================================================================
 // --- 43 INCH VERTICAL SCRIPT ---
 // =================================================================================================
-
-async function vertical43InchNationalMsg(phoneNum, dataOfNational) {
-    let variables = JSON.stringify({
-        "to": phoneNum,
-        "type": "template",
-        "template": {
-            "name": "43vertical_for_national",
-            "language": { "code": "en" },
-            "components": [{
-                "type": "body",
-                "parameters": [
-                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
-                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
-                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
-                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
-                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
-                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
-                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive }
-                ],
-            }],
-        }
-    });
-
-    let config = { method: 'post', maxBodyLength: Infinity, url: `${baseUrl}/whatsapp-cloud/messages`, headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, data: variables };
-    return await requestAxios(config);
-}
-
-async function vertical43InchBranchMsg(phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
-    let variables = JSON.stringify({
-        "to": phoneNum,
-        "type": "template",
-        "template": { "name": "43vertical_for_branch", "language": { "code": "en" }, "components": [{ "type": "body", "parameters": [{ "type": "text", "text": branchCode }, { "type": "text", "text": branchCounts.active }, { "type": "text", "text": branchCounts.inactive }, { "type": "text", "text": inActiveOutletListStr }], }], }
-    });
-    let config = { method: 'post', maxBodyLength: Infinity, url: `${baseUrl}/whatsapp-cloud/messages`, headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, data: variables };
-    return await requestAxios(config);
-}
-
 async function send43InchMorningMessage(dbData) {
     console.log("\n--- Starting 43 Inch Vertical Morning Report ---");
     if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && dbData.length > 0) {
@@ -481,7 +369,7 @@ async function send43InchMorningMessage(dbData) {
             console.log("Sending 43 Inch Vertical National Messages...");
             for (let key in NationalPOCNum) {
                 let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await vertical43InchNationalMsg(phoneNum, dataStoreArray);
+                let nationalMsgRes = await vertical43InchNationalMsg("43vertical_for_national", phoneNum, dataStoreArray);
                 console.log(`43 Inch: ${key} ---> ${nationalMsgRes}`);
                 await delay(500);
             }
@@ -495,7 +383,7 @@ async function send43InchMorningMessage(dbData) {
                     for (const pocName in mpduBranchWisePOCNum[branch]) {
                         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
                         let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let branchMsgRes = await vertical43InchBranchMsg(phoneNum, branch, branchCounts, inActiveOutletListStr);
+                        let branchMsgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, branchCounts, inActiveOutletListStr);
                         console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
                         await delay(500);
                     }
@@ -795,8 +683,8 @@ SBLR : ${verticalDataStoreArray[0].SBLR?.active || 0} (Active) / ${verticalDataS
 
             await delay(8000);
 
-            // await sendMpduMorningMessage(dbResponse.rows);
-            // await send43InchMorningMessage(dbResponse.rows);
+            await sendMpduMorningMessage(dbResponse.rows);
+            await send43InchMorningMessage(dbResponse.rows);
         } catch (error) {
             console.error('Error during morning data retrieval:', error);
         }

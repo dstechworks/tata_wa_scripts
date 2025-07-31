@@ -377,6 +377,161 @@ async function tl_msg_squad_360(tempName, messageHeadText, phoneNum, storeName, 
     return reqAxios;
 }
 
+async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [{
+                "type": "body",
+                "parameters": [
+                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
+                    { "type": "text", "text": dataOfNational[0].WBHO.active }, { "type": "text", "text": dataOfNational[0].WBHO.inactive },
+                    { "type": "text", "text": dataOfNational[0].WNAG.active }, { "type": "text", "text": dataOfNational[0].WNAG.inactive },
+                    { "type": "text", "text": dataOfNational[0].WAHM.active }, { "type": "text", "text": dataOfNational[0].WAHM.inactive },
+                    { "type": "text", "text": dataOfNational[0].EVIZ.active }, { "type": "text", "text": dataOfNational[0].EVIZ.inactive },
+                    { "type": "text", "text": dataOfNational[0].SHYD.active }, { "type": "text", "text": dataOfNational[0].SHYD.inactive },
+                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive },
+                    { "type": "text", "text": dataOfNational[0].SCHE.active }, { "type": "text", "text": dataOfNational[0].SCHE.inactive },
+                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
+                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
+                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
+                    { "type": "text", "text": dataOfNational[0].NLUC.active }, { "type": "text", "text": dataOfNational[0].NLUC.inactive },
+                    { "type": "text", "text": dataOfNational[0].NEUP.active }, { "type": "text", "text": dataOfNational[0].NEUP.inactive },
+                    { "type": "text", "text": dataOfNational[0].EORI.active }, { "type": "text", "text": dataOfNational[0].EORI.inactive },
+                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
+                    { "type": "text", "text": dataOfNational[0].EGAU.active }, { "type": "text", "text": dataOfNational[0].EGAU.inactive },
+                    { "type": "text", "text": dataOfNational[0].NSAH.active }, { "type": "text", "text": dataOfNational[0].NSAH.inactive },
+                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
+                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
+                    { "type": "text", "text": dataOfNational[0].SKAR.active }, { "type": "text", "text": dataOfNational[0].SKAR.inactive },
+                    { "type": "text", "text": dataOfNational[0].SCOI.active }, { "type": "text", "text": dataOfNational[0].SCOI.inactive },
+                    { "type": "text", "text": dataOfNational[0].SERN.active }, { "type": "text", "text": dataOfNational[0].SERN.inactive }
+                ],
+            },],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
+async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": { "code": "en" },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": branchCode },
+                        { "type": "text", "text": branchCounts.active },
+                        { "type": "text", "text": branchCounts.inactive },
+                        { "type": "text", "text": inActiveOutletListStr }
+                    ],
+                },
+            ],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
+async function vertical43InchNationalMsg(tempName, phoneNum, dataOfNational) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": { "code": "en" },
+            "components": [{
+                "type": "body",
+                "parameters": [
+                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
+                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
+                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
+                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
+                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
+                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
+                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
+                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive }
+                ],
+            }],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
+async function vertical43InchBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": { "code": "en" },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": branchCode },
+                        { "type": "text", "text": branchCounts.active },
+                        { "type": "text", "text": branchCounts.inactive },
+                        { "type": "text", "text": inActiveOutletListStr }],
+                }
+            ],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
 module.exports = {
     nationalMsg,
     deviceWiseBackwallStatusMsg,
@@ -385,5 +540,9 @@ module.exports = {
     ae_msg,
     tl_msg,
     ae_msg_squad_360,
-    tl_msg_squad_360
+    tl_msg_squad_360,
+    mpduNationalMsg,
+    mpduBranchMsg,
+    vertical43InchNationalMsg,
+    vertical43InchBranchMsg
 };
