@@ -1,10 +1,8 @@
-const { areAllZonesZero } = require('../utils/helpers');
+const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils');
+const { delay, nameHelper, numberHelper, areAllZonesZero } = require('../utils/helpers.js');
 const { google } = require('googleapis');
-const axios = require('axios');
 const { Pool } = require('pg');
 const path = require('path');
-
-require('dotenv').config();
 
 const pool = new Pool({
     user: "postgres",
@@ -17,8 +15,6 @@ const pool = new Pool({
 // Logger Intialize
 const logger = require('./techworks_tab_logger');
 
-let baseUrl = process.env.TATA_BASE_URL;
-let authToken = process.env.AUTH_TOKEN;
 const baseSpreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
 let workbookData = {};
 
@@ -169,12 +165,6 @@ async function sendMessage() {
             return temp
         }
 
-        function delay(milliseconds) {
-            return new Promise(resolve => {
-                setTimeout(resolve, milliseconds);
-            });
-        }
-
         function getAllBranch() {
             let temp = {}
             baseDataSheet.forEach(x => {
@@ -183,263 +173,12 @@ async function sendMessage() {
             return temp
         }
 
-        function nameHelper(x) {
-            if (x && x.toString().trim().length > 0) {
-                const name = x.toString().split('/')[0].trim().toUpperCase();
-                return name;
-            }
-            return undefined;
-        }
-
-        function numberHelper(x) {
-            if (x && x.toString().trim().length >= 10) {
-                const number = x.toString().split('/')[0].replace(/[.\s]/g, '').substring(0, 10);
-                return number.length === 10 ? number : undefined;
-            }
-            return undefined;
-        }
-
         function conditionChecker(x) {
             if (nameHelper(x['AM Name']) && numberHelper(x['AM Mobile No']) && nameHelper(x['Assistant Name']) && numberHelper(x['Assistant Mobile No'])) {
                 return true;
             } else {
                 return false;
             }
-        }
-
-        async function requestAxios(config) {
-            return await axios.request(config)
-                .then((response) => {
-                    let apiData = response.data.id;
-                    return apiData;
-                })
-                .catch((error) => {
-                    return error
-                });
-        }
-
-        // National, District, Am, Assistant we have used common templates.
-
-        async function nationalMsg(phoneNum, zone) {
-            let variables = JSON.stringify({
-                "to": phoneNum,
-                "type": "template",
-                "template": {
-                    "name": "national_common",
-                    "language": {
-                        "code": "en"
-                    },
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                { "type": "text", "text": "TABLET" },
-                                { "type": "text", "text": zone.N.active },
-                                { "type": "text", "text": zone.N.inactive },
-                                { "type": "text", "text": zone.S.active },
-                                { "type": "text", "text": zone.S.inactive },
-                                { "type": "text", "text": zone.E.active },
-                                { "type": "text", "text": zone.E.inactive },
-                                { "type": "text", "text": zone.W.active },
-                                { "type": "text", "text": zone.W.inactive },
-                            ],
-                        },
-                    ],
-                }
-            });
-
-            let config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${baseUrl}/whatsapp-cloud/messages`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken
-                },
-                data: variables
-            };
-
-            let reqAxios = await requestAxios(config);
-            return reqAxios;
-        }
-
-        async function districtMsg(phoneNum, branchName, total, active, inActive) {
-            let variables = JSON.stringify({
-                "to": phoneNum,
-                "type": "template",
-                "template": {
-                    "name": "district_common",
-                    "language": {
-                        "code": "en"
-                    },
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                { "type": "text", "text": "TABLET" },
-                                { "type": "text", "text": branchName },
-                                { "type": "text", "text": total },
-                                { "type": "text", "text": active },
-                                { "type": "text", "text": inActive },
-                            ],
-                        },
-                    ],
-                }
-            });
-
-            let config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${baseUrl}/whatsapp-cloud/messages`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken
-                },
-                data: variables
-            };
-
-            let reqAxios = await requestAxios(config);
-            return reqAxios;
-        }
-
-        async function am_assistant_msg(phoneNum, sentName, total, active, inActive) {
-            let variables = JSON.stringify({
-                "to": phoneNum,
-                "type": "template",
-                "template": {
-                    "name": "am_assistant_common",
-                    "language": {
-                        "code": "en"
-                    },
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                { "type": "text", "text": "TABLET" },
-                                { "type": "text", "text": sentName },
-                                { "type": "text", "text": total },
-                                { "type": "text", "text": active },
-                                { "type": "text", "text": inActive },
-                            ],
-                        },
-                    ],
-                }
-            });
-
-            let config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${baseUrl}/whatsapp-cloud/messages`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken
-                },
-                data: variables
-            };
-
-            let reqAxios = await requestAxios(config);
-            return reqAxios;
-        }
-
-        async function ae_msg(phoneNum, storeName, dhanushId, tlName, tlNum, storeNum, buttonUrl) {
-            let variables = JSON.stringify({
-                "to": phoneNum,
-                "type": "template",
-                "source": "external",
-                "template": {
-                    "name": "ae_template_for_tablet",
-                    "language": {
-                        "code": "en"
-                    },
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                { "type": "text", "text": storeName },
-                                { "type": "text", "text": storeNum },
-                                { "type": "text", "text": dhanushId },
-                                { "type": "text", "text": "Offline" },
-                                { "type": "text", "text": tlName },
-                                { "type": "text", "text": tlNum },
-                            ],
-                        },
-                        {
-                            "type": "button",
-                            "sub_type": "URL",
-                            "index": "1",
-                            "parameters": [
-                                {
-                                    "type": "text",
-                                    "text": buttonUrl
-                                }
-                            ]
-                        }
-                    ],
-                }
-            });
-
-            let config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${baseUrl}/whatsapp-cloud/messages`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken
-                },
-                data: variables
-            };
-
-            let reqAxios = await requestAxios(config);
-            return reqAxios;
-        }
-
-        async function tl_msg(phoneNum, storeName, dhanushId, storeNum, buttonUrl) {
-            let variables = JSON.stringify({
-                "to": phoneNum,
-                "type": "template",
-                "source": "external",
-                "template": {
-                    "name": "team_lead_tab",
-                    "language": {
-                        "code": "en"
-                    },
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                { "type": "text", "text": storeName },
-                                { "type": "text", "text": dhanushId },
-                                { "type": "text", "text": storeNum },
-                            ],
-                        },
-                        {
-                            "type": "button",
-                            "sub_type": "URL",
-                            "index": "1",
-                            "parameters": [
-                                {
-                                    "type": "text",
-                                    "text": buttonUrl
-                                }
-                            ]
-                        }
-                    ],
-                }
-            });
-
-            let config = {
-                method: 'post',
-                maxBodyLength: Infinity,
-                url: `${baseUrl}/whatsapp-cloud/messages`,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': authToken
-                },
-                data: variables
-            };
-
-            let reqAxios = await requestAxios(config);
-            return reqAxios;
         }
 
         // console.log("\n");
@@ -619,7 +358,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             let phoneNum = `+91${NationalPOCNum[key]}`;
             // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            let nationalMsgRes = await nationalMsg(phoneNum, zone);
+            let nationalMsgRes = await nationalMsg("national_common", "TABLET", phoneNum, zone);
             console.log(`${key} ---> ${nationalMsgRes}`);
             ++tabTotalCount;
             await delay(500);
@@ -654,13 +393,13 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": allBranches[key]['inactive']
                     }
 
-                    let districtMsgRes = await districtMsg(obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                    let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
                     console.log("District --->", districtCount, districtMsgRes, "\n");
                     ++tabTotalCount;
                     await delay(500);
 
                     // if (districtCount > 0) {
-                    //     let districtMsgRes = await districtMsg(obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                    //     let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
                     //     console.log("District --->", districtCount, districtMsgRes, "\n");
                     //     ++tabTotalCount;
                     //     await delay(1000);
@@ -697,7 +436,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let amMsgRes = await am_assistant_msg(obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    let amMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
                     console.log(i, "AM --->", amMsgRes);
                     ++tabTotalCount;
                     await delay(500);
@@ -717,7 +456,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistantMsgRes = await am_assistant_msg(obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
                     console.log(i, "Assistant --->", assistantMsgRes);
                     ++tabTotalCount;
                     await delay(500);
@@ -737,7 +476,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistant2MsgRes = await am_assistant_msg(obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
                     console.log(i, "Assistant 2 --->", assistant2MsgRes);
                     ++tabTotalCount;
                     await delay(500);
@@ -774,7 +513,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE Name']).split(' ').join('')}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                     }
 
-                    let aeMsgRes = await ae_msg(obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", aeMsgRes);
                     ++tabTotalCount;
                     await delay(500);
@@ -796,7 +535,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE 2 Name']).split(' ').join('')}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                     }
 
-                    let ae2MsgRes = await ae_msg(obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", ae2MsgRes);
                     ++tabTotalCount;
                     await delay(500);
@@ -816,7 +555,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['TL Name']).split(' ').join('')}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                     }
 
-                    let tlMsgRes = await tl_msg(obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
                     console.log(i, "TL --->", tlMsgRes);
                     ++tabTotalCount;
                     await delay(500);
