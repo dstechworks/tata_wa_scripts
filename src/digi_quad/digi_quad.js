@@ -345,7 +345,7 @@ async function startScript() {
 
 
         /////////------------------------------- Send National Message ----------------------------/////////
-        let messageBodyNP = `NATIONAL TECHWORKS-BACKWALL STATUS
+        let messageBodyNP = `NATIONAL DIGI-QUAD STATUS
 North : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)
 South : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)
 East  : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)
