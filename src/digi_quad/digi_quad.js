@@ -1,4 +1,4 @@
-const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils.js');
+const { nationalMsg, districtMsg, am_assistant_msg, ae_msg_digi_quad, tl_msg_digi_quad } = require('../utils/whatsappMsgTempUtils.js');
 const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper } = require('../utils/helpers.js');
 const moment = require('moment-timezone');
 const { google } = require('googleapis');
@@ -497,7 +497,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE Name']).split(' ').join('')}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                     }
 
-                    let aeMsgRes = await ae_msg("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let aeMsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", aeMsgRes);
                     ++digiQuadTotalCount;
                     await delay(500);
@@ -519,7 +519,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE 2 Name']).split(' ').join('')}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                     }
 
-                    let ae2MsgRes = await ae_msg("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let ae2MsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", ae2MsgRes);
                     ++digiQuadTotalCount;
                     await delay(500);
@@ -540,7 +540,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['TL Name']).split(' ').join('')}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                     }
 
-                    let tlMsgRes = await tl_msg("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    let tlMsgRes = await tl_msg_digi_quad("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
                     console.log(i, "TL --->", tlMsgRes);
                     ++digiQuadTotalCount;
                     await delay(500);
