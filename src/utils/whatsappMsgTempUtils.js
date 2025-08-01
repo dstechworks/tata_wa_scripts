@@ -635,6 +635,44 @@ async function vertical43InchBranchMsg(tempName, phoneNum, branchCode, branchCou
     return await requestAxios(config);
 }
 
+async function magentaMsg(tempName, messageHeadText, phoneNum, obj) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": obj.total },
+                        { "type": "text", "text": obj.active },
+                        { "type": "text", "text": obj.inactive },
+                        { "type": "text", "text": obj.inactive_outlets },
+                    ],
+                },
+            ],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+
+    let reqAxios = await requestAxios(config);
+    return reqAxios;
+}
+
 module.exports = {
     nationalMsg,
     deviceWiseBackwallStatusMsg,
@@ -649,5 +687,6 @@ module.exports = {
     mpduNationalMsg,
     mpduBranchMsg,
     vertical43InchNationalMsg,
-    vertical43InchBranchMsg
+    vertical43InchBranchMsg,
+    magentaMsg
 };

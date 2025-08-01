@@ -18,7 +18,7 @@ const logger = winston.createLogger({
     transports: [
         // new winston.transports.Console(), // Log to console
         new winston.transports.File({
-            filename: path.resolve(__dirname, `./mpdu-43vertical-logs/log-${moment().format('DD-MM-YYYY')}.log`),
+            filename: path.resolve(__dirname, `./magenta-mobility-logs/log-${moment().format('DD-MM-YYYY')}.log`),
             datePattern: 'DD-MM-YYYY',
             zippedArchive: true,
             maxSize: '100m', // Set the maximum file size to 100MB
