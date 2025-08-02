@@ -1,25 +1,26 @@
-name: Deploy to Server
+#!/bin/bash
 
-on:
-  push:
-    branches:
-      - production  # 🔁 Change to your deployment branch if needed
+echo "===== DEPLOY STARTED at $(date) =====" >> /tmp/deploy.log
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+cd ~/tata_wa_scripts || {
+  echo "❌ ERROR: Could not cd into project folder" >> /tmp/deploy.log
+  exit 1
+}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# Load NVM environment
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts  # 🔁 Replace IP
+# Git Pull
+echo "Pulling latest code from origin/production..." >> /tmp/deploy.log
+git pull origin production >> /tmp/deploy.log 2>&1
 
-      - name: Run Deploy Script on Server
-        run: |
-          ssh root@165.22.218.65 'bash -s' < ./deploy.sh  # 🔁 Replace user, IP, and script path
+# Remove node_modules
+echo "Removing node_modules..." >> /tmp/deploy.log
+rm -rf node_modules >> /tmp/deploy.log 2>&1
+
+# Install dependencies
+echo "Running npm install..." >> /tmp/deploy.log
+npm install >> /tmp/deploy.log 2>&1
+
+echo "===== DEPLOY COMPLETED at $(date) =====" >> /tmp/deploy.log
