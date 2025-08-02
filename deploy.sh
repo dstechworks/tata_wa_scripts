@@ -24,6 +24,6 @@ npm install >> /tmp/deploy.log 2>&1
 
 # Restart app
 echo "Restarting app with PM2..." >> /tmp/deploy.log
-pm2 restart 0 >> /tmp/deploy.log 2>&1
+pm2 restart ~/tata_wa_scripts/main.js >> /tmp/deploy.log 2>&1
 
 echo "===== DEPLOY COMPLETED at $(date) =====" >> /tmp/deploy.log
