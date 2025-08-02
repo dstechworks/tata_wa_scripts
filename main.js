@@ -1,38 +1,40 @@
-// magenta_cron.js
 const cron = require('node-cron');
 const { exec } = require('child_process');
 const moment = require('moment-timezone');
+const path = require('path');
 
 const TIMEZONE = 'Asia/Kolkata';
 
-console.log("main.js running...");
-
+console.log("magenta_cron.js running...");
 
 function logWithTime(message) {
-  const time = moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss');
-  console.log(`[${time}] ${message}`);
+    const time = moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss');
+    console.log(`[${time}] ${message}`);
 }
 
 function runMagentaScript() {
-  logWithTime('Running Magenta Mobility (9:36 PM daily)');
-  exec('node src/magenta_mobility/magenta_mobility.js', (error, stdout, stderr) => {
-    if (error) {
-      logWithTime(`Magenta ERROR: ${error.message}`);
-      return;
-    }
-    if (stderr) {
-      logWithTime(`Magenta STDERR: ${stderr}`);
-      return;
-    }
-    logWithTime(`Magenta OUTPUT: ${stdout.trim()}`);
-  });
+    logWithTime('Running Magenta Mobility (9:36 PM daily)');
+
+    const magentaScriptPath = path.resolve(__dirname, 'src/magenta_mobility/magenta_mobility.js');
+
+    exec(`node "${magentaScriptPath}"`, (error, stdout, stderr) => {
+        if (error) {
+            logWithTime(`Magenta ERROR: ${error.message}`);
+            return;
+        }
+        if (stderr) {
+            logWithTime(`Magenta STDERR: ${stderr}`);
+            return;
+        }
+        logWithTime(`Magenta OUTPUT: ${stdout.trim()}`);
+    });
 }
 
 // Run every day at 21:36 IST
-cron.schedule('58 21 * * *', () => {
-  runMagentaScript();
+cron.schedule('15 22 * * *', () => {
+    runMagentaScript();
 }, {
-  timezone: TIMEZONE
+    timezone: TIMEZONE
 });
 
 
