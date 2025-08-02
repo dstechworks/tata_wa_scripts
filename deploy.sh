@@ -7,7 +7,7 @@ cd ~/tata_wa_scripts || {
   exit 1
 }
 
-# Load NVM environment
+# Load NVM
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
@@ -15,12 +15,15 @@ export NVM_DIR="$HOME/.nvm"
 echo "Pulling latest code from origin/production..." >> /tmp/deploy.log
 git pull origin production >> /tmp/deploy.log 2>&1
 
-# Remove node_modules
+# Clean install
 echo "Removing node_modules..." >> /tmp/deploy.log
 rm -rf node_modules >> /tmp/deploy.log 2>&1
 
-# Install dependencies
-echo "Running npm install..." >> /tmp/deploy.log
+echo "Installing dependencies..." >> /tmp/deploy.log
 npm install >> /tmp/deploy.log 2>&1
+
+# Restart PM2 App
+echo "Restarting app..." >> /tmp/deploy.log
+pm2 restart 0 >> /tmp/deploy.log 2>&1
 
 echo "===== DEPLOY COMPLETED at $(date) =====" >> /tmp/deploy.log
