@@ -31,7 +31,7 @@ function runMagentaScript() {
 }
 
 // Run every day at 21:36 IST
-cron.schedule('26 22 * * *', () => {
+cron.schedule('40 22 * * *', () => {
     runMagentaScript();
 }, {
     timezone: TIMEZONE
