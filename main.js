@@ -1,41 +1,41 @@
-const cron = require('node-cron');
-const { exec } = require('child_process');
-const moment = require('moment-timezone');
-const path = require('path');
+// const cron = require('node-cron');
+// const { exec } = require('child_process');
+// const moment = require('moment-timezone');
+// const path = require('path');
 
-const TIMEZONE = 'Asia/Kolkata';
+// const TIMEZONE = 'Asia/Kolkata';
 
-console.log("magenta_cron.js running...");
+// console.log("magenta_cron.js running...");
 
-function logWithTime(message) {
-    const time = moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss');
-    console.log(`[${time}] ${message}`);
-}
+// function logWithTime(message) {
+//     const time = moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss');
+//     console.log(`[${time}] ${message}`);
+// }
 
-function runMagentaScript() {
-    logWithTime('Running Magenta Mobility (9:36 PM daily)');
+// function runMagentaScript() {
+//     logWithTime('Running Magenta Mobility (9:36 PM daily)');
 
-    const magentaScriptPath = path.resolve(__dirname, 'src/magenta_mobility/magenta_mobility.js');
+//     const magentaScriptPath = path.resolve(__dirname, 'src/magenta_mobility/magenta_mobility.js');
 
-    exec(`node "${magentaScriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-            logWithTime(`Magenta ERROR: ${error.message}`);
-            return;
-        }
-        if (stderr) {
-            logWithTime(`Magenta STDERR: ${stderr}`);
-            return;
-        }
-        logWithTime(`Magenta OUTPUT: ${stdout.trim()}`);
-    });
-}
+//     exec(`node "${magentaScriptPath}"`, (error, stdout, stderr) => {
+//         if (error) {
+//             logWithTime(`Magenta ERROR: ${error.message}`);
+//             return;
+//         }
+//         if (stderr) {
+//             logWithTime(`Magenta STDERR: ${stderr}`);
+//             return;
+//         }
+//         logWithTime(`Magenta OUTPUT: ${stdout.trim()}`);
+//     });
+// }
 
-// Run every day at 21:36 IST
-cron.schedule('40 22 * * *', () => {
-    runMagentaScript();
-}, {
-    timezone: TIMEZONE
-});
+// // Run every day at 21:36 IST
+// cron.schedule('40 22 * * *', () => {
+//     runMagentaScript();
+// }, {
+//     timezone: TIMEZONE
+// });
 
 
 
