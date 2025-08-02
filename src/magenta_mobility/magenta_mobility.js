@@ -16,16 +16,16 @@ let authToken = null;
 
 let NationalPOCNum = {
     "Hitesh": "8700685675",
-    "Himanshu": "9266903109",
-    "Dhruv": "8826909378",
-    "Sumit": "8920131195",
-    "Pratek": "9818429501",
-    "Chirag": "9818875211",
-    "rusum": "9266903108",
-    "Prachi": "9022042736",
-    "Bring It On": "9881925215",
-    "Chandrasekhar Satapathy": "9820100168",
-    "Ritesh Jadhav": "9326672498",
+    // "Himanshu": "9266903109",
+    // "Dhruv": "8826909378",
+    // "Sumit": "8920131195",
+    // "Pratek": "9818429501",
+    // "Chirag": "9818875211",
+    // "rusum": "9266903108",
+    // "Prachi": "9022042736",
+    // "Bring It On": "9881925215",
+    // "Chandrasekhar Satapathy": "9820100168",
+    // "Ritesh Jadhav": "9326672498",
 }
 
 async function getAccessToken() {
