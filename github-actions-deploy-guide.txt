@@ -1,0 +1,136 @@
+==============================
+🚀 GitHub Actions Deploy Guide
+==============================
+
+This guide outlines how to automatically deploy code to a remote server (e.g., DigitalOcean) when pushing to the production branch.
+
+──────────────────────────────
+🧩 1. Workflow File: .github/workflows/deploy.yml
+──────────────────────────────
+
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:  # Optional manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H YOUR.SERVER.IP >> ~/.ssh/known_hosts
+
+      - name: Run Deploy Script on Server
+        run: |
+          ssh -o StrictHostKeyChecking=no root@YOUR.SERVER.IP 'bash -s' < ./deploy.sh
+
+──────────────────────────────
+🔑 2. Set Up SSH Authentication
+──────────────────────────────
+
+1. On local machine:
+
+   ssh-keygen -t ed25519 -C "github-actions" -f github_actions_key
+
+2. Add public key to your server:
+
+   ssh-copy-id -i github_actions_key.pub root@YOUR.SERVER.IP
+
+   OR paste `github_actions_key.pub` into ~/.ssh/authorized_keys on the server.
+
+3. Add private key to GitHub Secrets:
+
+   Name: SSH_PRIVATE_KEY
+   Value: (contents of github_actions_key)
+
+──────────────────────────────
+📦 3. Server-Side: deploy.sh
+──────────────────────────────
+
+#!/bin/bash
+
+echo "===== DEPLOY STARTED at $(date) =====" >> /tmp/deploy.log
+
+cd ~/tata_wa_scripts || {
+  echo "❌ ERROR: Cannot cd into project dir" >> /tmp/deploy.log
+  exit 1
+}
+
+# Load NVM (optional if using it)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+echo "Pulling code from origin/production..." >> /tmp/deploy.log
+git pull origin production >> /tmp/deploy.log 2>&1
+
+echo "Removing node_modules..." >> /tmp/deploy.log
+rm -rf node_modules >> /tmp/deploy.log 2>&1
+
+echo "Installing dependencies..." >> /tmp/deploy.log
+npm install >> /tmp/deploy.log 2>&1
+
+echo "Restarting app with PM2..." >> /tmp/deploy.log
+pm2 restart your-app-name >> /tmp/deploy.log 2>&1
+
+echo "===== DEPLOY COMPLETE at $(date) =====" >> /tmp/deploy.log
+
+──────────────────────────────
+🧪 4. Test Your Workflow
+──────────────────────────────
+
+1. Commit and push to production:
+   git add .
+   git commit -m "Test deploy"
+   git push origin production
+
+2. Or manually run via Actions tab → "Deploy to Server" → "Run Workflow"
+
+3. SSH into server and view the log:
+
+   cat /tmp/deploy.log
+
+──────────────────────────────
+🐞 5. Common Errors & Fixes
+──────────────────────────────
+
+❌ Permission denied (publickey)
+→ SSH key not added properly or private key is incorrect in GitHub Secrets.
+
+❌ bash: npm: command not found
+→ Load NVM in deploy.sh or use full path to npm.
+
+❌ Workflow doesn’t show in GitHub
+→ File not committed to `.github/workflows/` folder.
+
+❌ PM2 not restarting
+→ Wrong app name. Use `pm2 list` to find the correct name.
+
+──────────────────────────────
+✅ Optional Improvements
+──────────────────────────────
+
+- Add `pm2 logs your-app-name --lines 50` to view logs after restart.
+- Set up `pm2 save` and `pm2 startup` for auto-restart on server reboot.
+- Add Slack/email webhook for deployment status notifications.
+
+──────────────────────────────
+✏️ Notes
+──────────────────────────────
+
+- This guide assumes the server user is `root`. You can use `ubuntu` or other users if SSH is configured.
+- Avoid using hardcoded secrets. Use GitHub Secrets for all keys and tokens.
+
+──────────────────────────────
+
+📌 Keep this guide handy as `github-actions-deploy-guide.txt` in your project root for reference.
