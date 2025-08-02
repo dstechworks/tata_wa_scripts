@@ -5,6 +5,9 @@ const moment = require('moment-timezone');
 
 const TIMEZONE = 'Asia/Kolkata';
 
+console.log("main.js running...");
+
+
 function logWithTime(message) {
   const time = moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss');
   console.log(`[${time}] ${message}`);
