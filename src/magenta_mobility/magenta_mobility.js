@@ -16,16 +16,16 @@ let authToken = null;
 
 let NationalPOCNum = {
     "Hitesh": "8700685675",
-    // "Himanshu": "9266903109",
-    // "Dhruv": "8826909378",
-    // "Sumit": "8920131195",
-    // "Pratek": "9818429501",
-    // "Chirag": "9818875211",
-    // "rusum": "9266903108",
-    // "Prachi": "9022042736",
-    // "Bring It On": "9881925215",
-    // "Chandrasekhar Satapathy": "9820100168",
-    // "Ritesh Jadhav": "9326672498",
+    "Himanshu": "9266903109",
+    "Dhruv": "8826909378",
+    "Sumit": "8920131195",
+    "Pratek": "9818429501",
+    "Chirag": "9818875211",
+    "rusum": "9266903108",
+    "Prachi": "9022042736",
+    "Bring It On": "9881925215",
+    "Chandrasekhar Satapathy": "9820100168",
+    "Ritesh Jadhav": "9326672498",
 }
 
 async function getAccessToken() {
@@ -71,41 +71,44 @@ async function getApiData() {
     }
 }
 
+function areAllDataZero(dataObj) {
+    return dataObj.active == 0 && dataObj.inactive == 0;
+}
+
 async function startScript() {
     const server1Results = await getApiData();
 
-    const inactiveDisplays = server1Results?.filter(item => item?.loggedIn === 0)?.map(item => item?.display)?.filter(Boolean)?.join(', ');
-    const activeCount = server1Results.filter(item => item?.loggedIn === 1).length;
-    const inactiveCount = server1Results.filter(item => item?.loggedIn === 0).length;
-    const totalCount = server1Results.length;
+    let dataObj = {
+        "total": server1Results.length,
+        "active": server1Results.filter(item => item?.loggedIn === 1).length,
+        "inactive": server1Results.filter(item => item?.loggedIn === 0).length,
+        "inactive_outlets": server1Results?.filter(item => item?.loggedIn === 0)?.map(item => item?.display)?.filter(Boolean)?.join(', '),
+    }
 
-    // console.log(`Active Displays: ${activeCount}`);
-    // console.log(`Inactive Displays: ${inactiveCount}`);
-    // console.log(`Total Displays: ${totalCount}`);
-    // console.log(`Inactive Screens List : ${inactiveDisplays}`);
+    console.log(`Displays Data : ${dataObj}`);
 
     console.log("\n");
+
     let messageBodyNP = `MAGENTA SCREEN STATUS :
-Total : ${totalCount}
-Active : ${activeCount}
-Inactive : ${inactiveCount}
-Inactive Outlets :-
-${inactiveDisplays}`;
+Total : ${dataObj?.total}
+Active : ${dataObj?.active}
+Inactive : ${dataObj?.inactive}
+Inactive Outlets :- ${dataObj?.inactive_outlets}`;
+
     console.log(messageBodyNP, "\n");
+
+    if (areAllDataZero(dataObj)) {
+        console.log('Active/Inactive counts are zero - stopping script');
+        return;
+    }
 
     await delay(8000);
 
     for (let key in NationalPOCNum) {
         let phoneNum = `+91${NationalPOCNum[key]}`;
-        let obj = {
-            "total": totalCount,
-            "active": activeCount,
-            "inactive": inactiveCount,
-            "inactive_outlets": inactiveDisplays,
-        }
         // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-        let nationalMsgRes = await magentaMsg("magenta_offline_screens_1", null, phoneNum, obj);
+        let nationalMsgRes = await magentaMsg("magenta_offline_screens_1", null, phoneNum, dataObj);
         console.log(`${key} ---> ${nationalMsgRes}`);
         await delay(500);
     }
