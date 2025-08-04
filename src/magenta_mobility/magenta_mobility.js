@@ -108,7 +108,7 @@ Inactive Outlets :- ${dataObj?.inactive_outlets}`;
         let phoneNum = `+91${NationalPOCNum[key]}`;
         // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-        let nationalMsgRes = await magentaMsg("magenta_offline_screens_1", null, phoneNum, dataObj);
+        let nationalMsgRes = await magentaMsg("magenta_offline_screens_template", null, phoneNum, dataObj);
         console.log(`${key} ---> ${nationalMsgRes}`);
         await delay(500);
     }
