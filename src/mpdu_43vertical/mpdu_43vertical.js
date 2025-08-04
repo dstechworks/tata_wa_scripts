@@ -236,7 +236,7 @@ async function sendMpduMorningMessage(dbData) {
             console.log("Sending MPDU National Messages...");
             for (let key in NationalPOCNum) {
                 let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await mpduNationalMsg("mpdu_for_national", phoneNum, dataStoreArray);
+                let nationalMsgRes = await mpduNationalMsg("national_temp_for_mpdu", phoneNum, dataStoreArray);
                 console.log(`MPDU National: ${key} ---> ${nationalMsgRes}`);
                 await delay(500);
             }
@@ -369,7 +369,7 @@ async function send43InchMorningMessage(dbData) {
             console.log("Sending 43 Inch Vertical National Messages...");
             for (let key in NationalPOCNum) {
                 let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await vertical43InchNationalMsg("43vertical_for_national", phoneNum, dataStoreArray);
+                let nationalMsgRes = await vertical43InchNationalMsg("national_temp_for_43vertical", phoneNum, dataStoreArray);
                 console.log(`43 Inch: ${key} ---> ${nationalMsgRes}`);
                 await delay(500);
             }
@@ -669,6 +669,8 @@ NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataS
 WPUN : ${verticalDataStoreArray[0].WPUN?.active || 0} (Active) / ${verticalDataStoreArray[0].WPUN?.inactive || 0} (Inactive)
 NJPR : ${verticalDataStoreArray[0].NJPR?.active || 0} (Active) / ${verticalDataStoreArray[0].NJPR?.inactive || 0} (Inactive)
 SBLR : ${verticalDataStoreArray[0].SBLR?.active || 0} (Active) / ${verticalDataStoreArray[0].SBLR?.inactive || 0} (Inactive)
+NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive)
+SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataStoreArray[0].SHYD?.inactive || 0} (Inactive)
 `;
                 console.log("\n43 INCH VERTICAL SUMMARY PREVIEW:\n" + verticalMessageBodyNational);
                 verticalAllZero = allBranchesZero(verticalDataStoreArray[0], uniqueBranchCodes);

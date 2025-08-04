@@ -4,6 +4,8 @@ require('dotenv').config();
 let baseUrl = process.env.TATA_BASE_URL;
 let authToken = process.env.AUTH_TOKEN;
 
+const getStatusText = (active = 0, inactive = 0) => `${active} (Active) / ${inactive} (Inactive)`;
+
 async function requestAxios(config) {
     return await axios.request(config)
         .then((response) => {
@@ -481,6 +483,31 @@ async function tl_msg_squad_360(tempName, messageHeadText, phoneNum, storeName, 
 }
 
 async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
+    const parameters = [
+        { type: "text", text: getStatusText(dataOfNational[0]?.national?.active, dataOfNational[0]?.national?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WBHO?.active, dataOfNational[0]?.WBHO?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WNAG?.active, dataOfNational[0]?.WNAG?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WAHM?.active, dataOfNational[0]?.WAHM?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.EVIZ?.active, dataOfNational[0]?.EVIZ?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SHYD?.active, dataOfNational[0]?.SHYD?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SBLR?.active, dataOfNational[0]?.SBLR?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SCHE?.active, dataOfNational[0]?.SCHE?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NJPR?.active, dataOfNational[0]?.NJPR?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WMUM?.active, dataOfNational[0]?.WMUM?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WPUN?.active, dataOfNational[0]?.WPUN?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NLUC?.active, dataOfNational[0]?.NLUC?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NEUP?.active, dataOfNational[0]?.NEUP?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.EORI?.active, dataOfNational[0]?.EORI?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.ECAL?.active, dataOfNational[0]?.ECAL?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.EGAU?.active, dataOfNational[0]?.EGAU?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NSAH?.active, dataOfNational[0]?.NSAH?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NCHA?.active, dataOfNational[0]?.NCHA?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NDEL?.active, dataOfNational[0]?.NDEL?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SKAR?.active, dataOfNational[0]?.SKAR?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SCOI?.active, dataOfNational[0]?.SCOI?.inactive) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SERN?.active, dataOfNational[0]?.SERN?.inactive) }
+    ];
+
     let variables = JSON.stringify({
         "to": phoneNum,
         "type": "template",
@@ -491,30 +518,7 @@ async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
             },
             "components": [{
                 "type": "body",
-                "parameters": [
-                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
-                    { "type": "text", "text": dataOfNational[0].WBHO.active }, { "type": "text", "text": dataOfNational[0].WBHO.inactive },
-                    { "type": "text", "text": dataOfNational[0].WNAG.active }, { "type": "text", "text": dataOfNational[0].WNAG.inactive },
-                    { "type": "text", "text": dataOfNational[0].WAHM.active }, { "type": "text", "text": dataOfNational[0].WAHM.inactive },
-                    { "type": "text", "text": dataOfNational[0].EVIZ.active }, { "type": "text", "text": dataOfNational[0].EVIZ.inactive },
-                    { "type": "text", "text": dataOfNational[0].SHYD.active }, { "type": "text", "text": dataOfNational[0].SHYD.inactive },
-                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SCHE.active }, { "type": "text", "text": dataOfNational[0].SCHE.inactive },
-                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
-                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
-                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
-                    { "type": "text", "text": dataOfNational[0].NLUC.active }, { "type": "text", "text": dataOfNational[0].NLUC.inactive },
-                    { "type": "text", "text": dataOfNational[0].NEUP.active }, { "type": "text", "text": dataOfNational[0].NEUP.inactive },
-                    { "type": "text", "text": dataOfNational[0].EORI.active }, { "type": "text", "text": dataOfNational[0].EORI.inactive },
-                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
-                    { "type": "text", "text": dataOfNational[0].EGAU.active }, { "type": "text", "text": dataOfNational[0].EGAU.inactive },
-                    { "type": "text", "text": dataOfNational[0].NSAH.active }, { "type": "text", "text": dataOfNational[0].NSAH.inactive },
-                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
-                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
-                    { "type": "text", "text": dataOfNational[0].SKAR.active }, { "type": "text", "text": dataOfNational[0].SKAR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SCOI.active }, { "type": "text", "text": dataOfNational[0].SCOI.inactive },
-                    { "type": "text", "text": dataOfNational[0].SERN.active }, { "type": "text", "text": dataOfNational[0].SERN.inactive }
-                ],
+                "parameters": parameters
             },],
         }
     });
@@ -567,6 +571,19 @@ async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inAct
 }
 
 async function vertical43InchNationalMsg(tempName, phoneNum, dataOfNational) {
+    const parameters = [
+        { type: "text", text: getStatusText(dataOfNational[0]?.national?.active ?? 0, dataOfNational[0]?.national?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WMUM?.active ?? 0, dataOfNational[0]?.WMUM?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.ECAL?.active ?? 0, dataOfNational[0]?.ECAL?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NDEL?.active ?? 0, dataOfNational[0]?.NDEL?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NCHA?.active ?? 0, dataOfNational[0]?.NCHA?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.WPUN?.active ?? 0, dataOfNational[0]?.WPUN?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NJPR?.active ?? 0, dataOfNational[0]?.NJPR?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SBLR?.active ?? 0, dataOfNational[0]?.SBLR?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.NEUP?.active ?? 0, dataOfNational[0]?.NEUP?.inactive ?? 0) },
+        { type: "text", text: getStatusText(dataOfNational[0]?.SHYD?.active ?? 0, dataOfNational[0]?.SHYD?.inactive ?? 0) },
+    ];
+
     let variables = JSON.stringify({
         "to": phoneNum,
         "type": "template",
@@ -575,16 +592,7 @@ async function vertical43InchNationalMsg(tempName, phoneNum, dataOfNational) {
             "language": { "code": "en" },
             "components": [{
                 "type": "body",
-                "parameters": [
-                    { "type": "text", "text": dataOfNational[0].national.active }, { "type": "text", "text": dataOfNational[0].national.inactive },
-                    { "type": "text", "text": dataOfNational[0].WMUM.active }, { "type": "text", "text": dataOfNational[0].WMUM.inactive },
-                    { "type": "text", "text": dataOfNational[0].ECAL.active }, { "type": "text", "text": dataOfNational[0].ECAL.inactive },
-                    { "type": "text", "text": dataOfNational[0].NDEL.active }, { "type": "text", "text": dataOfNational[0].NDEL.inactive },
-                    { "type": "text", "text": dataOfNational[0].NCHA.active }, { "type": "text", "text": dataOfNational[0].NCHA.inactive },
-                    { "type": "text", "text": dataOfNational[0].WPUN.active }, { "type": "text", "text": dataOfNational[0].WPUN.inactive },
-                    { "type": "text", "text": dataOfNational[0].NJPR.active }, { "type": "text", "text": dataOfNational[0].NJPR.inactive },
-                    { "type": "text", "text": dataOfNational[0].SBLR.active }, { "type": "text", "text": dataOfNational[0].SBLR.inactive }
-                ],
+                "parameters": parameters,
             }],
         }
     });
