@@ -31,8 +31,8 @@ const currentTime = moment().tz("Asia/Kolkata");
 // server 1
 const apiUrlServer1 = 'http://139.59.57.237/api';
 const tokenEndpointServer1 = 'http://139.59.57.237/api/authorize/access_token';
-const clientIDServer1 = '60eb1ceb842c535a8c563d879a5f2c78aa3f7d27';
-const clientSecretServer1 = 'f8ea9d80e29bb904d1a5d9e19a1dd45d21b0a19d5abb20de47ed42c2e468c1f12b78cd522163b0ba861a7e0ff7050686e20a1a03894803ed5558a96709829d7a8b523b69129153f6a14d854ab56e3d0c519e0100ab7bb5fc871f3e9aaf3246ec1770f7d7a9158da85f6dc4334819cd2985cd07aa9152f4ee7e89e1a23a9f5f';
+const clientIDServer1 = '7c56c3b5e6b350293b8ef2eeea12a17ef66a7e49';
+const clientSecretServer1 = '84d326acc305e908651ebec93d1a3b80ce4fadbb062746309949e75096face87bcd6b31312830c0492829f69288e3ed7e92d30171b6400c6abdc56eb519f547d069697afcbda138228eb577811cab83e2649586e67d6adf953d6976acc04055916c2d843bd94a99e5323a72b9acd855ee42113201faa73b689a91c798232c0';
 // server 2
 const apiUrlServer2 = 'https://xtravu.techworksworld.com/api';
 const tokenEndpointServer2 = 'https://xtravu.techworksworld.com/api/authorize/access_token';
@@ -320,7 +320,7 @@ async function sendMpduEveningMessage(apiData) {
             for (let key in sblrBranchNum) {
                 let phoneNum = `+91${sblrBranchNum[key]}`;
                 let inActiveOutletListStr = isEmpty(dataStoreArray[0].SBLR.inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0].SBLR.inActiveOutletList;
-                let SBLRMsgRes = await mpduBranchMsg(phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
+                let SBLRMsgRes = await mpduBranchMsg("mpdu_for_branch", phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
                 console.log(`MPDU SBLR: ${key} ---> ${SBLRMsgRes}`);
                 await delay(500);
             }
@@ -454,7 +454,7 @@ async function send43InchEveningMessage(apiData) {
             for (let key in sblrBranchNum) {
                 let phoneNum = `+91${sblrBranchNum[key]}`;
                 let inActiveOutletListStr = isEmpty(dataStoreArray[0].SBLR.inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0].SBLR.inActiveOutletList;
-                let SBLRMsgRes = await vertical43InchBranchMsg(phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
+                let SBLRMsgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
                 console.log(`43 Inch SBLR: ${key} ---> ${SBLRMsgRes}`);
                 await delay(500);
             }
@@ -490,17 +490,19 @@ async function startScript() {
         try {
             console.log('Getting initial tokens...');
             await getAccessToken(1);
-            await getAccessToken(2);
+            // await getAccessToken(2);
 
             console.log('Processing Server 1...');
             const server1Results = await getApiData(1);
 
-            console.log('Processing Server 2...');
-            const server2Results = await getApiData(2);
+            // console.log('Processing Server 2...');
+            // const server2Results = await getApiData(2);
 
             const server1ResultsWithSource = server1Results.map(item => ({ ...item, sourceServer: 1 }));
-            const server2ResultsWithSource = server2Results.map(item => ({ ...item, sourceServer: 2 }));
-            const apiData = [...server1ResultsWithSource, ...server2ResultsWithSource];
+            // const server2ResultsWithSource = server2Results.map(item => ({ ...item, sourceServer: 2 }));
+            // const apiData = [...server1ResultsWithSource, ...server2ResultsWithSource];
+            const apiData = [...server1ResultsWithSource];
+
             console.log(`Total combined results from APIs: ${apiData.length}`);
 
             // Build and print SBLR summary for MPDU
