@@ -49,3 +49,12 @@ cron.schedule('0 17 * * 1-6', () => {
         runScript('MPDU 43 Vertical', 'src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
     }, { timezone: TIMEZONE });
 });
+
+
+// Run a script manually if i want to runscript manually without using cron
+// runScript('Techworks Tab', 'src/techworks_tab/techworks_tab.js');
+// runScript('Techworks Backwall', 'src/techworks_backwall/techworks_backwall.js');
+// runScript('Digi Quad', 'src/digi_quad/digi_quad.js');
+// runScript('MPDU 43 Vertical', 'src/mpdu_43vertical/mpdu_43vertical.js');
+// runScript('Squad 360', 'src/squad_360/squad_360.js');
+// runScript('Magenta Mobility', 'src/magenta_mobility/magenta_mobility.js');
