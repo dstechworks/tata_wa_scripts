@@ -4,20 +4,36 @@ function delay(milliseconds) {
     });
 }
 
+function naValueHelper(value) {
+    return value ? value : 'NA';
+}
+
+function isNaValueFoundHelper(value) {
+    return value && value !== 'NA';
+}
+
+function spaceCheckerHelper(value) {
+    if (value) {
+        const checked = isNaValueFoundHelper(value);
+        return checked !== 'NA' ? checked.toString().split(' ').join('') : 'NA';
+    }
+    return 'NA';
+}
+
 function nameHelper(x) {
     if (x && x.toString().trim().length > 0) {
         const name = x.toString().split('/')[0].trim().toUpperCase();
         return name;
     }
-    return undefined;
+    return 'NA';
 }
 
 function numberHelper(x) {
     if (x && x.toString().trim().length >= 10) {
         const number = x.toString().split('/')[0].replace(/[.\s]/g, '').substring(0, 10);
-        return number.length === 10 ? number : undefined;
+        return number.length === 10 ? number : 'NA';
     }
-    return undefined;
+    return 'NA';
 }
 
 function conditionCheckerHelper(x) {
@@ -37,4 +53,4 @@ function areAllZonesZero(zone) {
     );
 }
 
-module.exports = { delay, nameHelper, numberHelper, conditionCheckerHelper, areAllZonesZero };
+module.exports = { delay, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper, nameHelper, numberHelper, conditionCheckerHelper, areAllZonesZero };
