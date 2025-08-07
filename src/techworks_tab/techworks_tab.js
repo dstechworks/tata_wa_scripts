@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils');
-const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper, naValueHelper, spaceCheckerHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper, naValueHelper, spaceCheckerHelper, isNaValueFoundHelper } = require('../utils/helpers.js');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
 const path = require('path');
@@ -488,69 +488,69 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             const x = TLDevice[i];
             // console.log("Branch :: ", x['Branch']);
 
-                // Ae Logic
-                if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
-                    let messageBodyAE = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['AE Mobile No']}`, "\n")
-                    // console.log(messageBodyAE)
+            // Ae Logic
+            if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
+                let messageBodyAE = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['AE Mobile No']}`, "\n")
+                // console.log(messageBodyAE)
 
-                    let obj = {
-                        "phoneNum": `+91${x['AE Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "tlName": x['TL Name'],
-                        "tlNum": x['TL Mobile No'],
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                    }
-
-                    let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", aeMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['AE Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "tlName": x['TL Name'],
+                    "tlNum": x['TL Mobile No'],
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
 
-                // Ae 2 Logic
-                if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
-                    let messageBodyAE2 = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['AE Mobile No']}`, "\n")
-                    // console.log(messageBodyAE2)
+                let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                console.log(i, "AE --->", aeMsgRes);
+                ++tabTotalCount;
+                await delay(500);
+            }
 
-                    let obj = {
-                        "phoneNum": `+91${x['AE 2 Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "tlName": x['TL Name'],
-                        "tlNum": x['TL Mobile No'],
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                    }
+            // Ae 2 Logic
+            if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
+                let messageBodyAE2 = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['AE Mobile No']}`, "\n")
+                // console.log(messageBodyAE2)
 
-                    let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", ae2MsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['AE 2 Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "tlName": x['TL Name'],
+                    "tlNum": x['TL Mobile No'],
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
 
-                // Tl Logic
-                if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
-                    let messageBodyTL = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['TL Mobile No']}`, "\n")
-                    // console.log(messageBodyTL)
+                let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                console.log(i, "AE --->", ae2MsgRes);
+                ++tabTotalCount;
+                await delay(500);
+            }
 
-                    let obj = {
-                        "phoneNum": `+91${x['TL Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                    }
+            // Tl Logic
+            if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
+                let messageBodyTL = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['TL Mobile No']}`, "\n")
+                // console.log(messageBodyTL)
 
-                    let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "TL --->", tlMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['TL Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
+
+                let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                console.log(i, "TL --->", tlMsgRes);
+                ++tabTotalCount;
+                await delay(500);
+            }
         }
 
         console.log('*************************** AE and TL Messages Done ************************', "\n");

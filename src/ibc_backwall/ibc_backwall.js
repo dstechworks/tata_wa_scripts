@@ -1,5 +1,5 @@
 const { nationalMsg, deviceWiseBackwallStatusMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils.js');
-const { delay, nameHelper, numberHelper, areAllZonesZero, naValueHelper, isNaValueFoundHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper } = require('../utils/helpers.js');
 const { saveDataToExcel } = require('../utils/saveExcelUtils.js');
 const { google } = require('googleapis');
 const path = require('path');
@@ -128,7 +128,6 @@ async function sendMessage() {
                         x['AE Mobile No'] = numberHelper(filterData['AE Mobile No']);
                         x['AE 2 Name'] = nameHelper(filterData['AE 2 Name']);
                         x['AE 2 Mobile No'] = numberHelper(filterData['AE 2 Mobile No']);
-
 
                         temp.push(x)
                     }

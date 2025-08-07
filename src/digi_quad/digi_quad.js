@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg_digi_quad, tl_msg_digi_quad } = require('../utils/whatsappMsgTempUtils.js');
-const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper } = require('../utils/helpers.js');
 const moment = require('moment-timezone');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
@@ -107,10 +107,10 @@ async function startScript() {
 
 
                 if (filterData) {
-                    x['Device ID'] = nameHelper(filterData['Device ID']?.trim());
-                    x['Dhanush Id'] = nameHelper(filterData['Dhanush Id']);
-                    x['Store Name'] = nameHelper(filterData['Store Name']);
-                    x['Branch'] = nameHelper(filterData['Branch']?.trim());
+                    x['Device ID'] = filterData['Device ID']?.trim();
+                    x['Dhanush Id'] = naValueHelper(filterData['Dhanush Id']);
+                    x['Store Name'] = naValueHelper(filterData['Store Name']);
+                    x['Branch'] = naValueHelper(filterData['Branch']?.trim());
                     x['TL Name'] = nameHelper(filterData['TL Name']);
                     x['TL Mobile No'] = numberHelper(filterData['TL Mobile No']);
                     x['AE Name'] = nameHelper(filterData['AE Name']);
@@ -270,11 +270,11 @@ async function startScript() {
                 if (branch) allBranches[branch].inactive++;
 
                 TLDevice.push({
-                    'Dhanush Id': x['Dhanush Id'],
+                    'Dhanush Id': naValueHelper(x['Dhanush Id']),
                     'Device ID': x['Device ID'],
-                    'Store Name': nameHelper(x['Store Name']),
-                    'Store Number': numberHelper(x['outlet_contact_number']),
-                    'Branch': x['Branch'],
+                    'Store Name': naValueHelper(x['Store Name']),
+                    'Store Number': naValueHelper(x['outlet_contact_number']),
+                    'Branch': naValueHelper(x['Branch']),
                     'TL Name': nameHelper(x['TL Name']),
                     'TL Mobile No': numberHelper(x['TL Mobile No']),
                     'AE Name': nameHelper(x['AE Name']),
@@ -340,7 +340,7 @@ async function startScript() {
         // console.log(AEDevice);
         // console.log(allBranches);
         // console.log(zone);
-
+        // console.log(TLDevice)
 
 
 
@@ -425,7 +425,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             const [aeName, aeData] = AEDeviceEntries[i];
 
             // ========== AM Message ========== //
-            if (aeData.AM?.['Name'] && aeData.AM?.['Mobile No']) {
+            if (isNaValueFoundHelper(aeData.AM?.['Name']) && isNaValueFoundHelper(aeData.AM?.['Mobile No'])) {
                 const messageBodyAM = `DIGI-QUAD STATUS\nAE Name: ${aeName}\nTotal Devices: ${aeData['Total Count']}\nActive Devices: ${aeData['Active Count']}\nInactive Devices: ${aeData['InActive Count']}`;
 
                 // console.log(`AM Name : ${aeData.AM['Name']} , Mobile : ${aeData.AM['Mobile No']}`);
@@ -480,71 +480,69 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             const x = TLDevice[i];
             // console.log("Branch :: ", x['Branch']);
 
-            if (x['Store Name'] && x['Store Number'] && x['Branch'] && x['Device ID']) {
-                // Ae Logic
-                if (x['AE Name'] && x['AE Mobile No'] && x['TL Name'] && x['TL Mobile No']) {
-                    let messageBodyAE = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['AE Mobile No']}`, "\n")
-                    // console.log(messageBodyAE)
+            // Ae Logic
+            if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
+                let messageBodyAE = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['AE Mobile No']}`, "\n")
+                // console.log(messageBodyAE)
 
-                    let obj = {
-                        "phoneNum": `+91${x['AE Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "tlName": x['TL Name'],
-                        "tlNum": x['TL Mobile No'],
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE Name']).split(' ').join('')}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
-                    }
-
-                    let aeMsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", aeMsgRes);
-                    ++digiQuadTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['AE Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "tlName": x['TL Name'],
+                    "tlNum": x['TL Mobile No'],
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
 
-                // Ae 2 Logic
-                if (x['AE 2 Name'] && x['AE 2 Mobile No'] && x['TL Name'] && x['TL Mobile No']) {
-                    let messageBodyAE2 = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['AE Mobile No']}`, "\n")
-                    // console.log(messageBodyAE2)
+                let aeMsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                console.log(i, "AE --->", aeMsgRes);
+                ++digiQuadTotalCount;
+                await delay(500);
+            }
 
-                    let obj = {
-                        "phoneNum": `+91${x['AE 2 Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "tlName": x['TL Name'],
-                        "tlNum": x['TL Mobile No'],
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['AE 2 Name']).split(' ').join('')}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
-                    }
+            // Ae 2 Logic
+            if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
+                let messageBodyAE2 = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['AE Mobile No']}`, "\n")
+                // console.log(messageBodyAE2)
 
-                    let ae2MsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", ae2MsgRes);
-                    ++digiQuadTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['AE 2 Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "tlName": x['TL Name'],
+                    "tlNum": x['TL Mobile No'],
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
 
-                // Tl Logic
-                if (x['TL Name'] && x['TL Mobile No']) {
-                    let messageBodyTL = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
-                    // console.log(`${x['TL Mobile No']}`, "\n")
-                    // console.log(messageBodyTL)
+                let ae2MsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                console.log(i, "AE --->", ae2MsgRes);
+                ++digiQuadTotalCount;
+                await delay(500);
+            }
 
-                    let obj = {
-                        "phoneNum": `+91${x['TL Mobile No']}`,
-                        "storeName": x['Store Name'],
-                        "deviceId": x['Device ID'],
-                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                        "storeNum": x['Store Number'],
-                        "buttonUrl": `complaint.html?storename=${(x['Store Name']).toString().split(' ').join('')}&name=${(x['TL Name']).split(' ').join('')}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
-                    }
+            // Tl Logic
+            if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
+                let messageBodyTL = `Hi ! DIGI-QUAD is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${x['TL Mobile No']}`, "\n")
+                // console.log(messageBodyTL)
 
-                    let tlMsgRes = await tl_msg_digi_quad("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "TL --->", tlMsgRes);
-                    ++digiQuadTotalCount;
-                    await delay(500);
+                let obj = {
+                    "phoneNum": `+91${x['TL Mobile No']}`,
+                    "storeName": x['Store Name'],
+                    "deviceId": x['Device ID'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
+
+                let tlMsgRes = await tl_msg_digi_quad("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                console.log(i, "TL --->", tlMsgRes);
+                ++digiQuadTotalCount;
+                await delay(500);
             }
         }
 
