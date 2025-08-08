@@ -494,7 +494,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             }
 
             // Ae 2 Logic
-            if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
+            if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
                 let messageBodyAE2 = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
                 // console.log("\n")
                 // console.log(messageBodyAE2)

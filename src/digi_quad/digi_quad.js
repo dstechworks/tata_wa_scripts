@@ -372,7 +372,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         console.log("\n");
         console.log('*************************** National Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
-        // await delay(1000);
+        await delay(1000);
 
 
         ////////-------------------------------- Send District Message ----------------------------/////////
@@ -448,23 +448,25 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             // ========== Assistant Messages ========== //
             const assistants = aeData.Assistants || {};
             for (const [assistantName, assistantData] of Object.entries(assistants)) {
-                const messageBodyAssistant = `DIGI-QUAD STATUS\nAE Name: ${aeName}\nAssistant: ${assistantName}\nTotal Devices: ${assistantData.Total}\nActive Devices: ${assistantData.Active}\nInactive Devices: ${assistantData.Inactive}`;
+                if (isNaValueFoundHelper(assistantName) && isNaValueFoundHelper(assistantData?.['Mobile No'])) {
+                    const messageBodyAssistant = `DIGI-QUAD STATUS\nAE Name: ${aeName}\nAssistant: ${assistantName}\nTotal Devices: ${assistantData.Total}\nActive Devices: ${assistantData.Active}\nInactive Devices: ${assistantData.Inactive}`;
 
-                // console.log(`Assistant Name : ${assistantName} , Mobile : ${assistantData['Mobile No']}`);
-                // console.log(messageBodyAssistant, "\n");
+                    // console.log(`Assistant Name : ${assistantName} , Mobile : ${assistantData['Mobile No']}`);
+                    // console.log(messageBodyAssistant, "\n");
 
-                const obj = {
-                    phoneNum: `+91${assistantData['Mobile No']}`,
-                    sentName: aeName,
-                    total: assistantData.Total,
-                    active: assistantData.Active,
-                    inActive: assistantData.Inactive
-                };
+                    const obj = {
+                        phoneNum: `+91${assistantData['Mobile No']}`,
+                        sentName: aeName,
+                        total: assistantData.Total,
+                        active: assistantData.Active,
+                        inActive: assistantData.Inactive
+                    };
 
-                let assistantMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                console.log(i, "Assistant --->", assistantMsgRes);
-                ++digiQuadTotalCount;
-                await delay(500);
+                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    console.log(i, "Assistant --->", assistantMsgRes);
+                    ++digiQuadTotalCount;
+                    await delay(500);
+                }
             }
         }
 
