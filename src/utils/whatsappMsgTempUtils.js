@@ -276,6 +276,109 @@ async function tl_msg(tempName, messageHeadText, phoneNum, storeName, dhanushId,
     return reqAxios;
 }
 
+async function ae_msg_techworks_backwall(tempName, messageHeadText, phoneNum, storeName, dhanushId, tlName, tlNum, storeNum, buttonUrl) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "source": "external",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": storeName },
+                        { "type": "text", "text": storeNum },
+                        { "type": "text", "text": dhanushId },
+                        { "type": "text", "text": "Offline" },
+                        { "type": "text", "text": tlName },
+                        { "type": "text", "text": tlNum },
+                    ],
+                },
+                {
+                    "type": "button",
+                    "sub_type": "URL",
+                    "index": "1",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": buttonUrl
+                        }
+                    ]
+                }
+            ],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+
+    let reqAxios = await requestAxios(config);
+    return reqAxios;
+}
+
+async function tl_msg_techworks_backwall(tempName, messageHeadText, phoneNum, storeName, deviceId, dhanushId, storeNum, buttonUrl) {
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "source": "external",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        { "type": "text", "text": storeName },
+                        { "type": "text", "text": storeNum },
+                        { "type": "text", "text": deviceId },
+                        { "type": "text", "text": dhanushId },
+                        { "type": "text", "text": "Offline" },
+                    ],
+                },
+                {
+                    "type": "button",
+                    "sub_type": "URL",
+                    "index": "1",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": buttonUrl
+                        }
+                    ]
+                }
+            ],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+
+    let reqAxios = await requestAxios(config);
+    return reqAxios;
+}
+
 async function ae_msg_digi_quad(tempName, messageHeadText, phoneNum, storeName, dhanushId, tlName, tlNum, storeNum, buttonUrl) {
     let variables = JSON.stringify({
         "to": phoneNum,
@@ -688,6 +791,8 @@ module.exports = {
     am_assistant_msg,
     ae_msg,
     tl_msg,
+    tl_msg_techworks_backwall,
+    ae_msg_techworks_backwall,
     ae_msg_digi_quad,
     tl_msg_digi_quad,
     ae_msg_squad_360,
