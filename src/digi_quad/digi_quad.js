@@ -15,10 +15,11 @@ const pool = new Pool({
 // Logger Intialize
 const logger = require('./digi_quad_logger');
 
-let workbookData = {};
 
 // GOOGLE API VARIABLES
 const spreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
+let workbookData = {};
+let isMessageSent = true;
 
 // dates variables
 const previousDate = moment().tz("Asia/Kolkata").subtract(1, 'day');
@@ -357,22 +358,28 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             return;
         }
 
-        await delay(7000);
+        if (isMessageSent) {
+            await delay(7000);
+        }
 
         for (let key in NationalPOCNum) {
             let phoneNum = `+91${NationalPOCNum[key]}`;
             // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            let nationalMsgRes = await nationalMsg("national_common", "DIGI-QUAD", phoneNum, zone);
-            console.log(`${key} ---> ${nationalMsgRes}`);
-            ++digiQuadTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let nationalMsgRes = await nationalMsg("national_common", "DIGI-QUAD", phoneNum, zone);
+                console.log(`${key} ---> ${nationalMsgRes}`);
+                ++digiQuadTotalCount;
+                await delay(500);
+            }
         }
 
         console.log("\n");
         console.log('*************************** National Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
-        await delay(1000);
+        if (isMessageSent) {
+            await delay(1000);
+        }
 
 
         ////////-------------------------------- Send District Message ----------------------------/////////
@@ -396,24 +403,28 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": allBranches[key]['inactive']
                     }
 
-                    let districtMsgRes = await districtMsg("district_common", "DIGI-QUAD", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    console.log("District --->", districtCount, districtMsgRes, "\n");
-                    ++digiQuadTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let districtMsgRes = await districtMsg("district_common", "DIGI-QUAD", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        console.log("District --->", districtCount, districtMsgRes, "\n");
+                        ++digiQuadTotalCount;
+                        await delay(500);
 
-                    // if (districtCount > 0) {
-                    //     let districtMsgRes = await districtMsg(obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    //     console.log("District --->", districtCount, districtMsgRes, "\n");
-                    //     ++digiQuadTotalCount;
-                    //     await delay(1000);
-                    // }
+                        // if (districtCount > 0) {
+                        //     let districtMsgRes = await districtMsg(obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        //     console.log("District --->", districtCount, districtMsgRes, "\n");
+                        //     ++digiQuadTotalCount;
+                        //     await delay(1000);
+                        // }
+                    }
                 }
             }
         }
 
         console.log('*************************** District Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
-        await delay(2000);
+        if (isMessageSent) {
+            await delay(2000);
+        }
 
 
 
@@ -439,10 +450,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     inActive: aeData['InActive Count']
                 };
 
-                let amMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                console.log(i, "AM --->", amMsgRes);
-                ++digiQuadTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let amMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    console.log(i, "AM --->", amMsgRes);
+                    ++digiQuadTotalCount;
+                    await delay(500);
+                }
             }
 
             // ========== Assistant Messages ========== //
@@ -462,17 +475,21 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         inActive: assistantData.Inactive
                     };
 
-                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant --->", assistantMsgRes);
-                    ++digiQuadTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistantMsgRes = await am_assistant_msg("am_assistant_common", "DIGI-QUAD", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant --->", assistantMsgRes);
+                        ++digiQuadTotalCount;
+                        await delay(500);
+                    }
                 }
             }
         }
 
         console.log('************************ AM & Assistant Messages Done ***********************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
-        await delay(2000);
+        if (isMessageSent) {
+            await delay(2000);
+        }
 
 
 
@@ -498,10 +515,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
 
-                let aeMsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", aeMsgRes);
-                ++digiQuadTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let aeMsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", aeMsgRes);
+                    ++digiQuadTotalCount;
+                    await delay(500);
+                }
             }
 
             // Ae 2 Logic
@@ -520,10 +539,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
 
-                let ae2MsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", ae2MsgRes);
-                ++digiQuadTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let ae2MsgRes = await ae_msg_digi_quad("ae_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", ae2MsgRes);
+                    ++digiQuadTotalCount;
+                    await delay(500);
+                }
             }
 
             // Tl Logic
@@ -541,10 +562,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=digiQuad`
                 }
 
-                let tlMsgRes = await tl_msg_digi_quad("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                console.log(i, "TL --->", tlMsgRes);
-                ++digiQuadTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let tlMsgRes = await tl_msg_digi_quad("tl_template_for_digi_quad", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "TL --->", tlMsgRes);
+                    ++digiQuadTotalCount;
+                    await delay(500);
+                }
             }
         }
 

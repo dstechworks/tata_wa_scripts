@@ -8,6 +8,7 @@ const path = require('path');
 // Logger Intialize
 const logger = require('./squad_360_logger');
 
+let isMessageSent = true;
 let listOfAssistant = [
     { "Branch": "NDEL", "Assistant Name": "Kunal Tiberwal", "Assistant Mobile No": "8017970345" }
 ];
@@ -344,22 +345,28 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         return;
     }
 
-    await delay(7000);
+    if(isMessageSent){
+        await delay(7000);
+    }
 
     for (let key in NationalPOCNum) {
         let phoneNum = `+91${NationalPOCNum[key]}`;
         // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-        let nationalMsgRes = await nationalMsg("national_common", "SQUAD-360", phoneNum, zone);
-        console.log(`${key} ---> ${nationalMsgRes}`);
-        ++squad360TotalCount;
-        await delay(500);
+        if (isMessageSent) {
+            let nationalMsgRes = await nationalMsg("national_common", "SQUAD-360", phoneNum, zone);
+            console.log(`${key} ---> ${nationalMsgRes}`);
+            ++squad360TotalCount;
+            await delay(500);
+        }
     }
 
     console.log("\n");
     console.log('*************************** National Messages Done ************************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    await delay(1000);
+    if(isMessageSent){
+        await delay(1000);
+    }
 
     ////////-------------------------------- Send District Message ----------------------------/////////
     // console.log(allBranches);
@@ -383,24 +390,29 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "inActive": allBranches[key]['inactive']
                 }
 
-                let districtMsgRes = await districtMsg("district_common", "SQUAD-360", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                console.log("District --->", districtCount, districtMsgRes, "\n");
-                ++squad360TotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let districtMsgRes = await districtMsg("district_common", "SQUAD-360", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                    console.log("District --->", districtCount, districtMsgRes, "\n");
+                    ++squad360TotalCount;
+                    await delay(500);
 
-                // if (districtCount > 0) {
-                //     let districtMsgRes = await districtMsg("district_common", "SQUAD-360", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                //     console.log("District --->", districtCount, districtMsgRes, "\n");
-                //     ++squad360TotalCount;
-                //     await delay(500);
-                // }
+
+                    // if (districtCount > 0) {
+                    //     let districtMsgRes = await districtMsg("district_common", "SQUAD-360", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                    //     console.log("District --->", districtCount, districtMsgRes, "\n");
+                    //     ++squad360TotalCount;
+                    //     await delay(500);
+                    // }
+                }
             }
         }
     }
 
     console.log('*************************** District Messages Done ************************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    await delay(1000);
+    if(isMessageSent){
+        await delay(1000);
+    }
 
     ////////-------------------------------- Send AM & Assistant Message ----------------------------/////////
     // console.log(JSON.stringify(AEDevice, null, 2));
@@ -424,10 +436,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 inActive: aeData['InActive Count']
             };
 
-            let amMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-            console.log(i, "AM --->", amMsgRes);
-            ++squad360TotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let amMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                console.log(i, "AM --->", amMsgRes);
+                ++squad360TotalCount;
+                await delay(500);
+            }
         }
 
         // ========== Assistant Messages ========== //
@@ -447,17 +461,21 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     inActive: assistantData.Inactive
                 };
 
-                let assistantMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                console.log(i, "Assistant --->", assistantMsgRes);
-                ++squad360TotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    console.log(i, "Assistant --->", assistantMsgRes);
+                    ++squad360TotalCount;
+                    await delay(500);
+                }
             }
         }
     }
 
     console.log('************************ AM & Assistant Messages Done ***********************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    await delay(2000);
+    if(isMessageSent){
+        await delay(2000);
+    }
 
     ////////-------------------------------- Send AE and TL Message ----------------------------/////////
     // console.log(TLDevice)
@@ -481,10 +499,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
             }
 
-            let aeMsgRes = await ae_msg_squad_360("ae_template_for_squad_360", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-            console.log(i, "AE --->", aeMsgRes);
-            ++squad360TotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let aeMsgRes = await ae_msg_squad_360("ae_template_for_squad_360", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                console.log(i, "AE --->", aeMsgRes);
+                ++squad360TotalCount;
+                await delay(500);
+            }
         }
 
         // Tl Logic
@@ -502,10 +522,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
             }
 
-            let tlMsgRes = await tl_msg_squad_360("tl_template_for_squad_360", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-            console.log(i, "TL --->", tlMsgRes);
-            ++squad360TotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let tlMsgRes = await tl_msg_squad_360("tl_template_for_squad_360", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                console.log(i, "TL --->", tlMsgRes);
+                ++squad360TotalCount;
+                await delay(500);
+            }
         }
     }
 

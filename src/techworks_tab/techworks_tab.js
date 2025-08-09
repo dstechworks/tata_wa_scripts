@@ -17,6 +17,7 @@ const logger = require('./techworks_tab_logger');
 
 const baseSpreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
 let workbookData = {};
+let isMessageSent = true;
 
 async function getDataFromGoogleSheets(sheetID, reference) {
     const accessGoogleSheet = async () => {
@@ -344,22 +345,28 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             return;
         }
 
-        await delay(7000);
+        if (isMessageSent) {
+            await delay(7000);
+        }
 
         for (let key in NationalPOCNum) {
             let phoneNum = `+91${NationalPOCNum[key]}`;
             // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            let nationalMsgRes = await nationalMsg("national_common", "TABLET", phoneNum, zone);
-            console.log(`${key} ---> ${nationalMsgRes}`);
-            ++tabTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let nationalMsgRes = await nationalMsg("national_common", "TABLET", phoneNum, zone);
+                console.log(`${key} ---> ${nationalMsgRes}`);
+                ++tabTotalCount;
+                await delay(500);
+            }
         }
 
         console.log("\n");
         console.log('*************************** National Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", tabTotalCount);
-        await delay(2000);
+        if (isMessageSent) {
+            await delay(2000);
+        }
 
 
 
@@ -385,24 +392,29 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": allBranches[key]['inactive']
                     }
 
-                    let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    console.log("District --->", districtCount, districtMsgRes, "\n");
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        console.log("District --->", districtCount, districtMsgRes, "\n");
+                        ++tabTotalCount;
+                        await delay(500);
 
-                    // if (districtCount > 0) {
-                    //     let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    //     console.log("District --->", districtCount, districtMsgRes, "\n");
-                    //     ++tabTotalCount;
-                    //     await delay(1000);
-                    // }
+                        // if (districtCount > 0) {
+                        //     let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        //     console.log("District --->", districtCount, districtMsgRes, "\n");
+                        //     ++tabTotalCount;
+                        //     await delay(1000);
+                        // }
+                    }
+
                 }
             }
         }
 
         console.log('*************************** District Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", tabTotalCount);
-        await delay(2000);
+        if (isMessageSent) {
+            await delay(2000);
+        }
 
 
 
@@ -428,10 +440,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let amMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "AM --->", amMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let amMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "AM --->", amMsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
 
                 // Assistant Logic
@@ -448,10 +462,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant --->", assistantMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistantMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant --->", assistantMsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
 
                 // Assistant 2 Logic
@@ -468,17 +484,21 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant 2 --->", assistant2MsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant 2 --->", assistant2MsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
             }
         }
 
         console.log('************************ AM & Assistant Messages Done ***********************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", tabTotalCount);
-        await delay(2000);
+        if (isMessageSent) {
+            await delay(2000);
+        }
 
 
 
@@ -504,10 +524,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
 
-                let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", aeMsgRes);
-                ++tabTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", aeMsgRes);
+                    ++tabTotalCount;
+                    await delay(500);
+                }
             }
 
             // Ae 2 Logic
@@ -526,10 +548,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
 
-                let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", ae2MsgRes);
-                ++tabTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", ae2MsgRes);
+                    ++tabTotalCount;
+                    await delay(500);
+                }
             }
 
             // Tl Logic
@@ -546,10 +570,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
                 }
 
-                let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                console.log(i, "TL --->", tlMsgRes);
-                ++tabTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "TL --->", tlMsgRes);
+                    ++tabTotalCount;
+                    await delay(500);
+                }
             }
         }
 

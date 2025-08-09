@@ -10,6 +10,7 @@ const logger = require('./ibc_backwall_logger');
 const baseSpreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
 const ibcCubesSpreadsheetId = "1cJ4taK4D7DClu6XBpVQeZFcsE4gvh9PkJkLP_J8QRkU";
 let workbookData = {};
+let isMessageSent = true;
 
 async function getDataFromGoogleSheets(sheetID, reference) {
     const accessGoogleSheet = async () => {
@@ -302,22 +303,28 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             return;
         }
 
-        await delay(10000);
+        if (isMessageSent) {
+            await delay(10000);
+        }
 
         for (let key in NationalPOCNum) {
             let phoneNum = `+91${NationalPOCNum[key]}`;
             // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
-
-            let nationalMsgRes = await nationalMsg("national_common", "IBC-BACKWALL", phoneNum, zone);
-            console.log(`${key} ---> ${nationalMsgRes}`);
-            ++backwallTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let nationalMsgRes = await nationalMsg("national_common", "IBC-BACKWALL", phoneNum, zone);
+                console.log(`${key} ---> ${nationalMsgRes}`);
+                ++backwallTotalCount;
+                await delay(500);
+            }
         }
 
         console.log("\n");
         console.log('*************************** National Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
-        await delay(1000);
+        if (isMessageSent) {
+            await delay(1000);
+        }
+
 
 
 
@@ -330,16 +337,20 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             let phoneNum = `+91${IBC_KOLKATA_POC_NUMBER[key]}`;
             // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            let deviceWiseBackwallMsgRes = await deviceWiseBackwallStatusMsg("device_wise_backwall_status", null, phoneNum, findByDeviceId, statusOfDevice);
-            console.log(`Itc Kolkata Ibc Backwall ---> ${key} ---> ${deviceWiseBackwallMsgRes}`);
-            ++backwallTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+                let deviceWiseBackwallMsgRes = await deviceWiseBackwallStatusMsg("device_wise_backwall_status", null, phoneNum, findByDeviceId, statusOfDevice);
+                console.log(`Itc Kolkata Ibc Backwall ---> ${key} ---> ${deviceWiseBackwallMsgRes}`);
+                ++backwallTotalCount;
+                await delay(500);
+            }
         }
 
         console.log("\n");
         console.log('*************************** IBC Kolkata device Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
-        await delay(1000);
+        if (isMessageSent) {
+            await delay(1000);
+        }
 
 
 
@@ -365,24 +376,29 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": allBranches[key]['inactive']
                     }
 
-                    let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    console.log("District --->", districtCount, districtMsgRes, "\n");
-                    ++backwallTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        console.log("District --->", districtCount, districtMsgRes, "\n");
+                        ++backwallTotalCount;
+                        await delay(500);
 
-                    // if (districtCount > 0) {
-                    //     let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                    //     console.log("District --->", districtCount, districtMsgRes, "\n");
-                    //     ++backwallTotalCount;
-                    //     await delay(500);
-                    // }
+                        // if (districtCount > 0) {
+                        //     let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                        //     console.log("District --->", districtCount, districtMsgRes, "\n");
+                        //     ++backwallTotalCount;
+                        //     await delay(500);
+                        // }
+                    }
+
                 }
             }
         }
 
         console.log('*************************** District Messages Done ************************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
-        await delay(1000);
+        if (isMessageSent) {
+            await delay(1000);
+        }
 
 
 
@@ -409,10 +425,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let amMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "AM --->", amMsgRes);
-                    ++backwallTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let amMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "AM --->", amMsgRes);
+                        ++backwallTotalCount;
+                        await delay(500);
+                    }
                 }
 
                 // Assistant Logic
@@ -429,10 +447,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant --->", assistantMsgRes);
-                    ++backwallTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistantMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant --->", assistantMsgRes);
+                        ++backwallTotalCount;
+                        await delay(500);
+                    }
                 }
 
                 // Assistant 2 Logic
@@ -449,26 +469,32 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         "inActive": data['InActive Count']
                     }
 
-                    let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant 2 --->", assistant2MsgRes);
-                    ++backwallTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant 2 --->", assistant2MsgRes);
+                        ++backwallTotalCount;
+                        await delay(500);
+                    }
                 }
             }
         }
 
+        console.log("\n");
         console.log('************************ AM & Assistant Messages Done ***********************', "\n");
         console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
-        await delay(1000);
+        if (isMessageSent) {
+            await delay(1000);
+        }
 
 
 
 
         ////////-------------------------------- Send AE and TL Message ----------------------------/////////
         // console.log(getInactiveDevices())
+        const inactiveDevicesForAeTl = getInactiveDevices();
 
-        for (let i = 0; i < getInactiveDevices().length; i++) {
-            const x = getInactiveDevices()[i];
+        for (let i = 0; i < inactiveDevicesForAeTl.length; i++) {
+            const x = inactiveDevicesForAeTl[i];
             // console.log("Branch :: ", x['Branch']);
 
             // Ae Logic
@@ -487,10 +513,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
                 }
 
-                let aeMsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", aeMsgRes);
-                ++backwallTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let aeMsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", aeMsgRes);
+                    ++backwallTotalCount;
+                    await delay(500);
+                }
             }
 
             // Ae 2 Logic
@@ -509,10 +537,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
                 }
 
-                let ae2MsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE 2 --->", ae2MsgRes);
-                ++backwallTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let ae2MsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE 2 --->", ae2MsgRes);
+                    ++backwallTotalCount;
+                    await delay(500);
+                }
             }
 
             // Tl Logic
@@ -529,13 +559,16 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                     "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
                 }
 
-                let tlMsgRes = await tl_msg("team_lead_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                console.log(i, "TL --->", tlMsgRes);
-                ++backwallTotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let tlMsgRes = await tl_msg("team_lead_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "TL --->", tlMsgRes);
+                    ++backwallTotalCount;
+                    await delay(500);
+                }
             }
         }
 
+        console.log("\n");
         console.log('*************************** AE and TL Messages Done ************************', "\n");
         console.log("-------------------------- All Messages Sent Successful --------------------");
         console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
