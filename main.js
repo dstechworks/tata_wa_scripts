@@ -35,7 +35,7 @@ cron.schedule('0 10 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Mon–Sat @ 5:00 PM: Run all except Magenta Mobility
-cron.schedule('55 17 * * 1-6', () => {
+cron.schedule('0 17 * * 1-6', () => {
     runScript('Techworks Tab', 'src/techworks_tab/techworks_tab.js'); // 5 PM
     runScript('Techworks Backwall', 'src/techworks_backwall/techworks_backwall.js'); // 5 PM
     runScript('Digi Quad', 'src/digi_quad/digi_quad.js'); // 5 PM
@@ -44,7 +44,7 @@ cron.schedule('55 17 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Daily @ 12:00 PM and 5:00 PM: Run MPDU 43 Vertical
-['0 12 * * *', '55 17 * * *'].forEach(schedule => {
+['0 12 * * *', '0 17 * * *'].forEach(schedule => {
     cron.schedule(schedule, () => {
         runScript('MPDU 43 Vertical', 'src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
     }, { timezone: TIMEZONE });
