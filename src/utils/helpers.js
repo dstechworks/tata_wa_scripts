@@ -14,8 +14,7 @@ function isNaValueFoundHelper(value) {
 
 function spaceCheckerHelper(value) {
     if (value) {
-        const checked = isNaValueFoundHelper(value);
-        return checked !== 'NA' ? checked.toString().split(' ').join('') : 'NA';
+        return value !== 'NA' ? value.toString().split(' ').join('') : 'NA';
     }
     return 'NA';
 }
