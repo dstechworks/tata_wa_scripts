@@ -15,11 +15,6 @@ let mpduBranchWisePOCNum = {
         "Archish Chauhan": "9909036138",
         "Sandip": "9319798915",
     },
-    "NEUP": {
-        "LAKSHI SETHI": "9838347730",
-        "Rohan": "9888311338",
-        "Sandip": "9319798915",
-    },
     "SHYD": {
         "Poulami Roy": "9948307149",
         "SURKANTI NIRANJAN": "9966332262",
@@ -102,6 +97,8 @@ let mpduBranchWisePOCNum = {
     },
     "NEUP": {
         "Laksh Sethi": "9838347730",
+        "Rohan": "9888311338",
+        "Sandip": "9319798915",
     },
     "SKAR": {
         "Sudhir Shetty": "9901322557",
