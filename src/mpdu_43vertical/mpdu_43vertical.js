@@ -52,14 +52,12 @@ let NationalPOCNum = {
     "Mark": "7871419732",
     "Rohan": "9888311338",
 }
-let sblrBranchNum = {
+let eveningBranchNum = {
     "Hitesh": "8700685675",
     "Dhruv": "8826909378",
     "Sandip": "9319798915",
     "Rusum": "9266903108",
-    "Mark": "7871419732",
-    "Rohan": "9888311338",
-    "Shreyas K": "8904657515"
+    "Rohan": "9888311338"
 }
 
 // =================================================================================================
@@ -266,72 +264,77 @@ async function sendMpduMorningMessage(dbData) {
 
 async function sendMpduEveningMessage(apiData) {
     console.log("\n--- Starting MPDU Evening Report ---");
-    if (workbookData['All Device'] && workbookData['All Device'].length > 0 && apiData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
+
+    const targetBranches = ["SBLR", "WPUN", "SCHE"]; // ✅ dynamic
+
+    if (workbookData['All Device']?.length > 0 && apiData.length > 0) {
+
+        let dataStoreArray = [{ national: { active: 0, inactive: 0, total: 0 } }];
+
         const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
-        uniqueBranchCodes.forEach(branch => {
-            if (branch === "SBLR") {
-                dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
+
+        // Initialize branch data
+        targetBranches.forEach(branch => {
+            if (uniqueBranchCodes.includes(branch)) {
+                dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "" };
             }
         });
 
-        if (uniqueBranchCodes.includes("SBLR")) {
-            workbookData['All Device'].forEach(deviceIdElement => {
-                const branchCode = deviceIdElement['Branch Code'];
-                if (branchCode === "SBLR") {
-                    const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                    if (findDeviceByTechworksId) {
-                        const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                        const outletName = deviceIdElement['Outlet Name'].trim();
-                        if (onlineDevice) {
-                            dataStoreArray[0].SBLR.active += 1;
-                        } else {
-                            dataStoreArray[0].SBLR.inactive += 1;
-                            dataStoreArray[0].SBLR.inActiveOutletList = dataStoreArray[0].SBLR.inActiveOutletList ? dataStoreArray[0].SBLR.inActiveOutletList + `, ${outletName}` : outletName;
-                        }
+        // Count active/inactive
+        workbookData['All Device'].forEach(deviceIdElement => {
+            const branchCode = deviceIdElement['Branch Code'];
+            if (targetBranches.includes(branchCode)) {
+                const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
+                if (findDeviceByTechworksId) {
+                    const onlineDevice = apiData.find(
+                        d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1
+                    );
+                    const outletName = deviceIdElement['Outlet Name'].trim();
+                    if (onlineDevice) {
+                        dataStoreArray[0][branchCode].active++;
+                    } else {
+                        dataStoreArray[0][branchCode].inactive++;
+                        dataStoreArray[0][branchCode].inActiveOutletList +=
+                            dataStoreArray[0][branchCode].inActiveOutletList
+                                ? `, ${outletName}`
+                                : outletName;
                     }
                 }
-            });
+            }
+        });
 
-            // Build and print SBLR summary for MPDU
-            let mpduSblr = { active: 0, inactive: 0 };
-            let mpduSblrAllZero = false;
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && apiData.length > 0) {
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (branchCode === "SBLR") {
-                        const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                        if (findDeviceByTechworksId) {
-                            const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                            if (onlineDevice) {
-                                mpduSblr.active += 1;
-                            } else {
-                                mpduSblr.inactive += 1;
-                            }
-                        }
-                    }
-                });
-                let mpduSblrMsg = `\nMPDU BRANCH STATUS\nSBLR : ${mpduSblr.active} (Active) / ${mpduSblr.inactive} (Inactive)\n`;
-                console.log(mpduSblrMsg);
-                mpduSblrAllZero = (mpduSblr.active === 0 && mpduSblr.inactive === 0);
+        // Loop for each branch
+        for (const branch of targetBranches) {
+            if (!dataStoreArray[0][branch]) {
+                console.log(`MPDU: ${branch} branch not found in the data.`);
+                continue;
             }
 
-            console.log("Sending MPDU SBLR Branch Messages...");
-            for (let key in sblrBranchNum) {
-                let phoneNum = `+91${sblrBranchNum[key]}`;
-                let inActiveOutletListStr = isEmpty(dataStoreArray[0].SBLR.inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0].SBLR.inActiveOutletList;
-                let SBLRMsgRes = await mpduBranchMsg("mpdu_for_branch", phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
-                console.log(`MPDU SBLR: ${key} ---> ${SBLRMsgRes}`);
+            console.log("\n");
+            console.log(`Sending MPDU ${branch} Branch Messages...`);
+            let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList)
+                ? "No inactive outlet list found"
+                : dataStoreArray[0][branch].inActiveOutletList;
+
+
+            for (let key in eveningBranchNum) {
+                let phoneNum = `+91${eveningBranchNum[key]}`;
+                let res = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                console.log(`MPDU ${branch}: ${key} ---> ${res}`);
                 await delay(500);
             }
-        } else {
-            console.log("MPDU: SBLR branch not found in the data.");
+
+            // Send additional message only to "Shreyas K" for SBLR
+            if (branch === "SBLR") {
+                let res = await mpduBranchMsg("mpdu_for_branch", `+91${mpduBranchWisePOCNum[branch]["Shreyas K"]}`, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                console.log(`MPDU ${branch}: Shreyas K ---> ${res}`);
+                await delay(500);
+            }
         }
     } else {
         console.log("MPDU: NOT FIND DATA LENGTH OF DATA GET FROM API OR GOOGLE SHEETS");
     }
 }
-
 
 // =================================================================================================
 // --- 43 INCH VERTICAL SCRIPT ---
@@ -399,70 +402,65 @@ async function send43InchMorningMessage(dbData) {
 
 async function send43InchEveningMessage(apiData) {
     console.log("\n--- Starting 43 Inch Vertical Evening Report ---");
-    if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && apiData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
-        const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
-        uniqueBranchCodes.forEach(branch => {
-            if (branch === "SBLR") {
-                dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
-            }
-        });
 
-        if (uniqueBranchCodes.includes("SBLR")) {
-            workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                const branchCode = deviceIdElement['Branch Code'];
-                if (branchCode === "SBLR") {
-                    const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
+    if (!workbookData['43 Inch Vertical'] || workbookData['43 Inch Vertical'].length === 0 || apiData.length === 0) {
+        console.log("43 Inch: No data found in API or Google Sheets");
+        return;
+    }
 
-                    if (findDeviceByTechworksId) {
-                        const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                        const outletName = deviceIdElement['Outlet Name'].trim();
-                        if (onlineDevice) {
-                            dataStoreArray[0].SBLR.active += 1;
-                        } else {
-                            dataStoreArray[0].SBLR.inactive += 1;
-                            dataStoreArray[0].SBLR.inActiveOutletList = dataStoreArray[0].SBLR.inActiveOutletList ? dataStoreArray[0].SBLR.inActiveOutletList + `, ${outletName}` : outletName;
-                        }
-                    }
+    const targetBranches = ["SBLR", "WPUN"];
+    let dataStoreArray = [{ "national": { active: 0, inactive: 0, total: 0 } }];
+
+    // Initialize data for each target branch
+    targetBranches.forEach(branch => {
+        dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "" };
+    });
+
+    // Count active/inactive for each branch
+    workbookData['43 Inch Vertical'].forEach(device => {
+        const branchCode = device['Branch Code'];
+        if (targetBranches.includes(branchCode)) {
+            const deviceInApi = apiData.find(d => d.display == device['Techworks ID']);
+            if (deviceInApi) {
+                const onlineDevice = apiData.find(
+                    d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device['Techworks ID'] && d.loggedIn == 1
+                );
+                const outletName = device['Outlet Name'].trim();
+                if (onlineDevice) {
+                    dataStoreArray[0][branchCode].active += 1;
+                } else {
+                    dataStoreArray[0][branchCode].inactive += 1;
+                    dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                        ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
+                        : outletName;
                 }
-            });
-
-            // Build and print SBLR summary for 43 Inch Vertical
-            let verticalSblr = { active: 0, inactive: 0 };
-            let verticalSblrAllZero = false;
-            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && apiData.length > 0) {
-                workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (branchCode === "SBLR") {
-                        const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                        if (findDeviceByTechworksId) {
-                            const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                            if (onlineDevice) {
-                                verticalSblr.active += 1;
-                            } else {
-                                verticalSblr.inactive += 1;
-                            }
-                        }
-                    }
-                });
-                let verticalSblrMsg = `\n43 VERTICAL BRANCH STATUS\nSBLR : ${verticalSblr.active} (Active) / ${verticalSblr.inactive} (Inactive)\n`;
-                console.log(verticalSblrMsg);
-                verticalSblrAllZero = (verticalSblr.active === 0 && verticalSblr.inactive === 0);
             }
-
-            console.log("Sending 43 Inch SBLR Branch Messages...");
-            for (let key in sblrBranchNum) {
-                let phoneNum = `+91${sblrBranchNum[key]}`;
-                let inActiveOutletListStr = isEmpty(dataStoreArray[0].SBLR.inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0].SBLR.inActiveOutletList;
-                let SBLRMsgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, "SBLR", dataStoreArray[0].SBLR, inActiveOutletListStr);
-                console.log(`43 Inch SBLR: ${key} ---> ${SBLRMsgRes}`);
-                await delay(500);
-            }
-        } else {
-            console.log("43 Inch: SBLR branch not found in the data.");
         }
-    } else {
-        console.log("43 Inch: NOT FIND DATA LENGTH OF DATA GET FROM API OR GOOGLE SHEETS");
+    });
+
+    // Send messages for each branch using single eveningBranchNum list
+    for (const branch of targetBranches) {
+        console.log("\n");
+        console.log(`Sending 43 Inch ${branch} Branch Messages...`);
+
+        let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList)
+            ? "No inactive outlet list found"
+            : dataStoreArray[0][branch].inActiveOutletList;
+
+        for (let key in eveningBranchNum) {
+            let phoneNum = `+91${eveningBranchNum[key]}`;
+
+            let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+            console.log(`43 Inch ${branch}: ${key} ---> ${msgRes}`);
+            await delay(500);
+        }
+
+        // Send additional message only to "Shreyas K" for SBLR
+        if (branch === "SBLR") {
+            let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", `+91${mpduBranchWisePOCNum[branch]["Shreyas K"]}`, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+            console.log(`43 Inch ${branch}: Shreyas K ---> ${msgRes}`);
+            await delay(500);
+        }
     }
 }
 
@@ -490,78 +488,66 @@ async function startScript() {
         try {
             console.log('Getting initial tokens...');
             await getAccessToken(1);
-            // await getAccessToken(2);
 
             console.log('Processing Server 1...');
             const server1Results = await getApiData(1);
-
-            // console.log('Processing Server 2...');
-            // const server2Results = await getApiData(2);
-
-            const server1ResultsWithSource = server1Results.map(item => ({ ...item, sourceServer: 1 }));
-            // const server2ResultsWithSource = server2Results.map(item => ({ ...item, sourceServer: 2 }));
-            // const apiData = [...server1ResultsWithSource, ...server2ResultsWithSource];
-            const apiData = [...server1ResultsWithSource];
-
+            const apiData = server1Results.map(item => ({ ...item, sourceServer: 1 }));
             console.log(`Total combined results from APIs: ${apiData.length}`);
 
-            // Build and print SBLR summary for MPDU
-            let mpduSblr = { active: 0, inactive: 0 };
-            let mpduSblrAllZero = false;
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && apiData.length > 0) {
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (branchCode === "SBLR") {
-                        const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                        if (findDeviceByTechworksId) {
-                            const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                            if (onlineDevice) {
-                                mpduSblr.active += 1;
-                            } else {
-                                mpduSblr.inactive += 1;
+            // Define branch codes for MPDU and 43 Vertical
+            const mpduBranches = ["SBLR", "WPUN", "SCHE"];
+            const verticalBranches = ["SBLR", "WPUN"];
+
+            // Function to calculate active/inactive for any branch array
+            function getBranchStatus(sheetName, branches) {
+                let status = {};
+                branches.forEach(code => status[code] = { active: 0, inactive: 0 });
+
+                if (workbookData[sheetName] && workbookData[sheetName].length > 0 && apiData.length > 0) {
+                    workbookData[sheetName].forEach(device => {
+                        const branchCode = device["Branch Code"];
+                        if (branches.includes(branchCode)) {
+                            const deviceInApi = apiData.find(d => d.display == device["Techworks ID"]);
+                            if (deviceInApi) {
+                                const isOnline = apiData.find(d =>
+                                    d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device["Techworks ID"] &&
+                                    d.loggedIn == 1
+                                );
+                                if (isOnline) status[branchCode].active++;
+                                else status[branchCode].inactive++;
                             }
                         }
-                    }
-                });
-                let mpduSblrMsg = `\nMPDU BRANCH STATUS\nSBLR : ${mpduSblr.active} (Active) / ${mpduSblr.inactive} (Inactive)\n`;
-                console.log(mpduSblrMsg);
-                mpduSblrAllZero = (mpduSblr.active === 0 && mpduSblr.inactive === 0);
+                    });
+                }
+                return status;
             }
 
-            // Build and print SBLR summary for 43 Inch Vertical
-            let verticalSblr = { active: 0, inactive: 0 };
-            let verticalSblrAllZero = false;
-            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && apiData.length > 0) {
-                workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (branchCode === "SBLR") {
-                        const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                        if (findDeviceByTechworksId) {
-                            const onlineDevice = apiData.find(d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1);
-                            if (onlineDevice) {
-                                verticalSblr.active += 1;
-                            } else {
-                                verticalSblr.inactive += 1;
-                            }
-                        }
-                    }
-                });
-                let verticalSblrMsg = `\n43 VERTICAL BRANCH STATUS\nSBLR : ${verticalSblr.active} (Active) / ${verticalSblr.inactive} (Inactive)\n`;
-                console.log(verticalSblrMsg);
-                verticalSblrAllZero = (verticalSblr.active === 0 && verticalSblr.inactive === 0);
-            }
+            // Get status for MPDU and 43 Inch Vertical
+            const mpduStatus = getBranchStatus("All Device", mpduBranches);
+            const verticalStatus = getBranchStatus("43 Inch Vertical", verticalBranches);
 
-            if (mpduSblrAllZero) {
-                console.log("SBLR MPDU branch is 0 (Active) / 0 (Inactive). Stopping script.");
+            // Display demo messages
+            console.log("\n--- MPDU EVENING STATUS ---");
+            Object.entries(mpduStatus).forEach(([branch, counts]) => {
+                console.log(`${branch} : ${counts.active} (Active) / ${counts.inactive} (Inactive)`);
+            });
+
+            console.log("\n--- 43 INCH VERTICAL EVENING STATUS ---");
+            Object.entries(verticalStatus).forEach(([branch, counts]) => {
+                console.log(`${branch} : ${counts.active} (Active) / ${counts.inactive} (Inactive)`);
+            });
+
+            // Stop script if all zero
+            if (Object.values(mpduStatus).every(c => c.active === 0 && c.inactive === 0)) {
+                console.log("All MPDU branches are 0 (Active) / 0 (Inactive). Stopping script.");
                 process.exit(0);
             }
-            if (verticalSblrAllZero) {
-                console.log("SBLR 43 Inch Vertical branch is 0 (Active) / 0 (Inactive). Stopping script.");
+            if (Object.values(verticalStatus).every(c => c.active === 0 && c.inactive === 0)) {
+                console.log("All 43 Inch Vertical branches are 0 (Active) / 0 (Inactive). Stopping script.");
                 process.exit(0);
             }
 
             await delay(8000);
-
             await sendMpduEveningMessage(apiData);
             await send43InchEveningMessage(apiData);
 
