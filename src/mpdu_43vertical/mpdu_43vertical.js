@@ -265,7 +265,7 @@ async function sendMpduMorningMessage(dbData) {
 async function sendMpduEveningMessage(apiData) {
     console.log("\n--- Starting MPDU Evening Report ---");
 
-    const targetBranches = ["SBLR", "WPUN", "SCHE"]; // ✅ dynamic
+    const targetBranches = ["SBLR", "WPUN", "SCHE", "NDEL"]; // ✅ dynamic
 
     if (workbookData['All Device']?.length > 0 && apiData.length > 0) {
 
@@ -408,7 +408,7 @@ async function send43InchEveningMessage(apiData) {
         return;
     }
 
-    const targetBranches = ["SBLR", "WPUN"];
+    const targetBranches = ["SBLR", "WPUN", "NDEL"];
     let dataStoreArray = [{ "national": { active: 0, inactive: 0, total: 0 } }];
 
     // Initialize data for each target branch
@@ -495,8 +495,8 @@ async function startScript() {
             console.log(`Total combined results from APIs: ${apiData.length}`);
 
             // Define branch codes for MPDU and 43 Vertical
-            const mpduBranches = ["SBLR", "WPUN", "SCHE"];
-            const verticalBranches = ["SBLR", "WPUN"];
+            const mpduBranches = ["SBLR", "WPUN", "SCHE", "NDEL"];
+            const verticalBranches = ["SBLR", "WPUN", "NDEL"];
 
             // Function to calculate active/inactive for any branch array
             function getBranchStatus(sheetName, branches) {
