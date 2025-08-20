@@ -507,7 +507,7 @@ async function ae_msg_squad_360(tempName, messageHeadText, phoneNum, storeName, 
                 {
                     "type": "button",
                     "sub_type": "URL",
-                    "index": "0",
+                    "index": "1",
                     "parameters": [
                         {
                             "type": "text",
@@ -558,7 +558,7 @@ async function tl_msg_squad_360(tempName, messageHeadText, phoneNum, storeName, 
                 {
                     "type": "button",
                     "sub_type": "URL",
-                    "index": "0",
+                    "index": "1",
                     "parameters": [
                         {
                             "type": "text",
