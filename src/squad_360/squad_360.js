@@ -345,7 +345,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         return;
     }
 
-    if(isMessageSent){
+    if (isMessageSent) {
         await delay(7000);
     }
 
@@ -364,7 +364,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
     console.log("\n");
     console.log('*************************** National Messages Done ************************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    if(isMessageSent){
+    if (isMessageSent) {
         await delay(1000);
     }
 
@@ -410,7 +410,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
 
     console.log('*************************** District Messages Done ************************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    if(isMessageSent){
+    if (isMessageSent) {
         await delay(1000);
     }
 
@@ -473,7 +473,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
 
     console.log('************************ AM & Assistant Messages Done ***********************', "\n");
     console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    if(isMessageSent){
+    if (isMessageSent) {
         await delay(2000);
     }
 
@@ -500,7 +500,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             }
 
             if (isMessageSent) {
-                let aeMsgRes = await ae_msg_squad_360("squad_360_ae_temp", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                let aeMsgRes = await ae_msg_squad_360("ae_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                 console.log(i, "AE --->", aeMsgRes);
                 ++squad360TotalCount;
                 await delay(500);
@@ -523,7 +523,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             }
 
             if (isMessageSent) {
-                let tlMsgRes = await tl_msg_squad_360("squad_360_tl_temp", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                let tlMsgRes = await tl_msg_squad_360("tl_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
                 console.log(i, "TL --->", tlMsgRes);
                 ++squad360TotalCount;
                 await delay(500);

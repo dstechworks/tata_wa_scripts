@@ -429,7 +429,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         ++twBackwallTotalCount;
                         await delay(500);
 
-                        
+
                         // if (districtCount > 0) {
                         //     let districtMsgRes = await districtMsg(obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
                         //     console.log("District --->", districtCount, districtMsgRes, "\n");
@@ -537,7 +537,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 }
 
                 if (isMessageSent) {
-                    let aeMsgRes = await ae_msg_techworks_backwall("ae_template_for_techworks_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let aeMsgRes = await ae_msg_techworks_backwall("ae_temp_tw_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", aeMsgRes);
                     ++twBackwallTotalCount;
                     await delay(500);
@@ -561,7 +561,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 }
 
                 if (isMessageSent) {
-                    let ae2MsgRes = await ae_msg_techworks_backwall("ae_template_for_techworks_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    let ae2MsgRes = await ae_msg_techworks_backwall("ae_temp_tw_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
                     console.log(i, "AE --->", ae2MsgRes);
                     ++twBackwallTotalCount;
                     await delay(500);
@@ -584,7 +584,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                 }
 
                 if (isMessageSent) {
-                    let tlMsgRes = await tl_msg_techworks_backwall("tl_template_for_techworks_backwall", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    let tlMsgRes = await tl_msg_techworks_backwall("tl_temp_tw_backwall", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
                     console.log(i, "TL --->", tlMsgRes);
                     ++twBackwallTotalCount;
                     await delay(500);
