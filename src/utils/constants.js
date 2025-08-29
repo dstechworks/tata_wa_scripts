@@ -92,6 +92,7 @@ let mpduBranchWisePOCNum = {
     },
     "NDEL": {
         "Amit Srivastava": "9792251777",
+        "Devendra Gupta":"8506993808",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
