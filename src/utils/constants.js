@@ -31,7 +31,7 @@ let mpduBranchWisePOCNum = {
         "Sandip": "9319798915",
     },
     "EVIZ": {
-        "MUBHASHIRA MOHAMMAD": "8179450179",
+        "Harini Podagatlapalli": "6303239551",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
@@ -65,7 +65,7 @@ let mpduBranchWisePOCNum = {
         "Sandip": "9319798915",
     },
     "EORI": {
-        "BIBEK SWAIN": "9658559578",
+        "Debasis Mohanty": "9078087356",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
