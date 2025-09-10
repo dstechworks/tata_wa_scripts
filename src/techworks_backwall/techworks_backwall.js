@@ -224,27 +224,16 @@ async function startScript() {
         let totalDevices = 0;
         let NationalPOCNum = {
             "Hitesh": "8700685675",
-            "Dhruv": "8826909378",
-            "Sumit": "8920131195",
-            "Pratek": "9818429501",
-            "Chirag": "9818875211",
-            "rusum": "9266903108",
-            "Karamveer": "7015266638",
-            "Rahul": "9205830129",
-            "Himanshu": "9266903109",
-            "Sandip": "9319798915",
-            "Kunal": "9818861960",
-            "Aditya": "9354613112",
-            "Uday": "9266903106",
-            "Ritik": "9266903110",
-            "Vibhas": "9266903104",
-            "Anirban Sen": "9831055203",
-            "Nitsh Chabbra": "9712933048",
-            "Nalin Kaushik": "9831055468",
-            "Gaurav Pundlik": "9831149422",
-            "Karan Sehgal": "9953006252",
-            "Rishab Agarwal": "9734469759",
-            "unknown": "9903955267"
+            // "Dhruv": "8826909378",
+            // "Sumit": "8920131195",
+            // "Pratek": "9818429501",
+            // "rusum": "9266903108",
+            // "Anirban Sen": "9831055203",
+            // "Nitsh Chabbra": "9712933048",
+            // "Nalin Kaushik": "9831055468",
+            // "Gaurav Pundlik": "9831149422",
+            // "Rishab Agarwal": "9734469759",
+            // "Milan Anandan": "9903955267"
         }
         let DistrictPOCNum = {
             "N": {
