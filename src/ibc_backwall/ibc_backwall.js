@@ -181,6 +181,7 @@ async function sendMessage() {
             // "Gaurav Pundlik": "9831149422",
             // "Rishab Agarwal": "9734469759",
             // "Milan Anandan": "9903955267"
+            // "Priyank Maheshwari": "9893585458"
         }
         let IBC_KOLKATA_POC_NUMBER = {
             "Hitesh": "8700685675",
