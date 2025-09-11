@@ -52,8 +52,11 @@ function delay(milliseconds) {
     });
     const page = await browser.newPage();
 
-    // Navigate the page to a URL
-    await page.goto('https://iads.ibccube.in/SSRT/app');
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'
+    );
+
+    await page.goto('https://iads.ibccube.in/SSRT/app', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // Set screen size
     // await page.setViewport({ width: 1080, height: 1600 });
