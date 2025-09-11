@@ -38,24 +38,8 @@ function delay(milliseconds) {
     // await deleteExcelFilesInDirectory();
 
     // Launch the browser and open a new blank page
-    const browser = await firefox.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu',
-            '--no-zygote',
-            '--single-process',
-            '--disable-http2',
-        ],
-    });
+    const browser = await firefox.launch({ headless: true });
     const page = await browser.newPage();
-
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36'
-    );
 
     await page.goto('https://iads.ibccube.in/SSRT/app', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
