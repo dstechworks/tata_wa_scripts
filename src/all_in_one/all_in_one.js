@@ -1,3 +1,4 @@
+const { firefox } = require('playwright');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const XLSX = require('xlsx');
@@ -37,7 +38,7 @@ function delay(milliseconds) {
     // await deleteExcelFilesInDirectory();
 
     // Launch the browser and open a new blank page
-    const browser = await puppeteer.launch({
+    const browser = await firefox.launch({
         headless: true,
         args: [
             '--no-sandbox',
