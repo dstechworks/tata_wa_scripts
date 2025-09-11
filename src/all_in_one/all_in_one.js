@@ -62,7 +62,6 @@ function delay(milliseconds) {
     // await page.setViewport({ width: 1080, height: 1600 });
     await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 0.5 });
 
-
     // Type into login page
     await page.waitForSelector('#account_id');
     await delay(1000);
