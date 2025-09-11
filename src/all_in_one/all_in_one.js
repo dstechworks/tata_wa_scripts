@@ -1,318 +1,163 @@
 const { firefox } = require('playwright');
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 
-puppeteer.use(StealthPlugin());
-
-function delay(milliseconds) {
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
+function delay(ms) {
+  return new Promise((res) => setTimeout(res, ms));
 }
 
 (async () => {
-    const deleteExcelFilesInDirectory = () => {
-        const directoryPath = path.join(__dirname, 'excel');
-        fs.readdir(directoryPath, (err, files) => {
-            if (err) {
-                console.error('Error reading directory:', err);
-                return;
-            }
-            files.forEach((file) => {
-                const filePath = path.join(directoryPath, file);
-                fs.unlink(filePath, (err) => {
-                    if (err) {
-                        console.error('Error deleting file:', err);
-                        return;
-                    }
-                    console.log('File deleted successfully:', filePath);
-                });
-            });
-        });
-    };
-
-    // await deleteExcelFilesInDirectory();
-
-    const browser = await firefox.launch({ headless: true });
-    const context = await browser.newContext({
-        viewport: { width: 800, height: 600, deviceScaleFactor: 0.5 }
+  // === Delete old Excel files ===
+  const deleteExcelFilesInDirectory = () => {
+    const directoryPath = path.join(__dirname, 'excel');
+    if (!fs.existsSync(directoryPath)) return;
+    fs.readdirSync(directoryPath).forEach((file) => {
+      const filePath = path.join(directoryPath, file);
+      fs.unlinkSync(filePath);
+      console.log('🗑️ Deleted old file:', filePath);
     });
-    const page = await context.newPage();
+  };
+  // deleteExcelFilesInDirectory();
 
-    await page.goto('https://iads.ibccube.in/SSRT/app', {
-        waitUntil: 'domcontentloaded',
-        timeout: 60000
-    });
+  // === Launch Firefox ===
+  const browser = await firefox.launch({ headless: true });
+  const context = await browser.newContext({
+    viewport: { width: 800, height: 600, deviceScaleFactor: 0.5 },
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0', // mimic real browser
+  });
+  const page = await context.newPage();
 
-    // Type into login page
-    await page.waitForSelector('#account_id');
-    await delay(1000);
-    await page.type('#account_id', 'IADS');
-    await delay(1000);
-    await page.type('#user_id', 'rakesh');
-    await delay(1000);
-    await page.type('#password', 'password');
-    await delay(1000);
-    await page.click('.button.active');
+  // === Login ===
+  await page.goto('https://iads.ibccube.in/SSRT/app', {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
+  });
 
-    console.log('Login successful');
+  await page.fill('#account_id', 'IADS');
+  await page.fill('#user_id', 'rakesh');
+  await page.fill('#password', 'password');
+  await page.click('.button.active');
 
-    await page.waitForSelector('#moduleselected');
-    await page.click('body');
-    await page.click('#moduleselected');
-    await page.select('#moduleselected', 'TRACKING');
-    await delay(1000);
-    await page.goto('https://iads.ibccube.in/SSRT/app');
+  console.log('✅ Login successful');
 
-    console.log('Navigated to the app');
+  // === Select module ===
+  await page.waitForSelector('#moduleselected');
+  await page.selectOption('#moduleselected', 'TRACKING');
+  await delay(1000);
+  await page.goto('https://iads.ibccube.in/SSRT/app');
+  console.log('✅ Navigated to app');
 
-    await delay(2000);
-    await page.waitForSelector('#parrsit_status');
-    await page.$eval('#parrsit_status', input => input.value = '');
-    await page.type('#parrsit_status', 'active');
+  // === Filters ===
+  await page.fill('#parrsit_status', 'active');
+  await page.fill('#parrsit_device', 'mi or bi');
+  console.log('✅ Filters applied');
 
-    console.log('Status set to active');
+  // === Date From ===
+  await page.click('#parrsit_from');
+  await delay(2000);
+  await page.click('.ui-datepicker-buttonpane .ui-datepicker-current');
+  await delay(2000);
 
-    await delay(2000);
-    await page.waitForSelector('#parrsit_device');
-    await page.$eval('#parrsit_device', input => input.value = '');
-    await page.type('#parrsit_device', 'mi or bi');
-
-    console.log('Device set to mi or bi');
-
-    await delay(2000);
-    await page.evaluate(() => {
-        const titles = Array.from(document.querySelectorAll('title'));
-        const targeTitle = titles.find(button => button.textContent.trim() === "Device: ");
-        if (targeTitle) {
-            targeTitle.click();
-        }
-    });
-
-    console.log('Device clicked');
-
-    await delay(5000);
-
-
-
-
-
-    //============================= date from ==================================//
-    // Click on the input field to open the datepicker
-    await page.waitForSelector('#parrsit_from');
-    await page.click('#parrsit_from');
-
-    console.log('Date from clicked');
-
-    await delay(2000);
-    await page.waitForSelector('.ui-datepicker-buttonpane .ui-datepicker-current');
-    await page.click('.ui-datepicker-buttonpane .ui-datepicker-current');
-
-    await delay(2000);
-    // Wait for the datepicker to appear
-    await page.waitForSelector('#ui-datepicker-div');
-    await page.waitForSelector('.ui_tpicker_hour_slider');
-
-    await page.click('.ui-datepicker-buttonpane .ui-datepicker-current');
-    // await page.click('.ui-datepicker-buttonpane .ui-datepicker-close');
-
-    await delay(3000)
-
-    // Wait for the slider handle to be visible
-    await page.waitForSelector('.ui_tpicker_hour_slider .ui-slider-handle');
-
-    // Find the slider element
-    const sliderHandle1 = await page.$('.ui_tpicker_hour_slider .ui-slider-handle');
-
-    // Move the slider to the left or right (adjust the distance based on your requirements)
-    await sliderHandle1.hover();
+  // Adjust time slider (hour)
+  const sliderHour = await page.$('.ui_tpicker_hour_slider .ui-slider-handle');
+  if (sliderHour) {
+    const box = await sliderHour.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(150, 0, { steps: 20 }); // Adjust the value as needed
+    await page.mouse.move(box.x + 150, box.y, { steps: 20 });
     await page.mouse.up();
+  }
 
-    await delay(3000)
-
-    // Find the slider element
-    const sliderHandle2 = await page.$('.ui_tpicker_minute_slider .ui-slider-handle');
-
-    await sliderHandle2.click();
-
-    // Move the slider to the left or right (adjust the distance based on your requirements)
-    await sliderHandle2.hover();
+  // Adjust time slider (minute)
+  const sliderMin = await page.$('.ui_tpicker_minute_slider .ui-slider-handle');
+  if (sliderMin) {
+    const box = await sliderMin.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.mouse.move(150, 0, { steps: 20 }); // Adjust the value as needed
+    await page.mouse.move(box.x + 150, box.y, { steps: 20 });
     await page.mouse.up();
-    //  await sliderHandle2.asElement().drag({ x: 150, y: 0 });
+  }
 
-    await page.waitForSelector('.ui_tpicker_time');
+  const readingValue = await page.textContent('.ui_tpicker_time');
+  console.log('⏰ Current reading:', readingValue);
 
-    const readingValue = await page.$eval('.ui_tpicker_time', (element) => element.innerText);
-    console.log('Current reading:', readingValue);
+  await page.click('.ui-datepicker-buttonpane .ui-datepicker-close');
 
-    await delay(3000)
+  // === Date To ===
+  await page.click('#parrsit_to');
+  await delay(2000);
+  await page.click('.ui-datepicker-buttonpane .ui-datepicker-current');
+  await delay(2000);
+  await page.click('.ui-datepicker-buttonpane .ui-datepicker-close');
+  console.log('✅ Date range set');
 
-    await page.waitForSelector('.ui-datepicker-buttonpane .ui-datepicker-close');
-    await page.click('.ui-datepicker-buttonpane .ui-datepicker-close');
-    await delay(3000);
-    //============================= date from ==================================//
+  // === Display & Output ===
+  await page.selectOption('#parrsit_display', 'SUMMARY');
+  await page.selectOption('#parrsit_output', 'excel');
 
+  // === Apply Filters ===
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Apply Date Filter'
+    );
+    btn?.click();
+  });
+  await delay(2000);
 
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Display Activity'
+    );
+    btn?.click();
+  });
+  console.log('✅ Applied Date Filter & Display Activity');
 
+  // === Wait for table ===
+  await page.waitForSelector('table');
 
-
-
-    //============================== date to ===================================//
-    await page.waitForSelector('#parrsit_to');
-    await page.click('#parrsit_to');
-
-    console.log('Date to clicked');
-
-    await delay(5000);
-    // Wait for the datepicker to appear
-    await page.waitForSelector('#ui-datepicker-div');
-    await page.waitForSelector('.ui_tpicker_minute_slider');
-    await page.waitForSelector('.ui-datepicker-buttonpane .ui-datepicker-current');
-    await page.click('.ui-datepicker-buttonpane .ui-datepicker-current');
-    await delay(2000)
-    await page.waitForSelector('.ui-datepicker-buttonpane .ui-datepicker-close');
-    await page.click('.ui-datepicker-buttonpane .ui-datepicker-close');
-
-    await delay(5000);
-    await page.waitForSelector('#parrsit_display');
-    await page.click('#parrsit_display');
-    await page.select('#parrsit_display', 'SUMMARY');
-
-    await delay(5000);
-    await page.waitForSelector('#parrsit_output');
-    await page.click('#parrsit_output');
-    await page.select('#parrsit_output', 'excel');
-    //============================== date to ===================================//
-
-
-
-
-
-    await delay(5000);
-    await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const targetButton = buttons.find(button => button.textContent.trim() === "Apply Date Filter");
-        if (targetButton) {
-            targetButton.click();
-        }
-    });
-
-    console.log('Apply Date Filter clicked');
-
-    await delay(5000);
-    await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        const targetButton = buttons.find(button => button.textContent.trim() === "Display Activity");
-        if (targetButton) {
-            targetButton.click();
-        }
-    });
-
-    console.log('Display Activity clicked');
-
-    return;
-
-    // Wait for some action to complete (if necessary)
-    await page.waitForTimeout(3000);
-
-    await delay(300000);
-    await page.waitForSelector('.formsearch[type="submit"]');
-    const searchBtn = await page.$('.button.formsearch[type="submit"]');
-    await searchBtn.hover();
-    await page.click('.button.formsearch[type="submit"]');
-
-    await delay(2000);
-
-    await page.waitForSelector('button.button.linknormal');
-    await page.click('a[href="/SSRT/app?function=report&target=SITE-ACTIVITY"]');
-
-    await page.waitForSelector('table');
-
-    // await delay(5000);
-
-
-    // Wait for navigation to complete
-    await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
-
-    // Listen for the request event
-    page.on('request', request => {
-        if (request.resourceType() === 'document' && request.method() === 'GET') {
-            // Check if the URL matches the one you expect for downloading the document
-            const url = request.url();
-            if (url.includes('SSRT/app?function=report&target=SITE-ACTIVITY')) {
-                console.log('Downloading document:', url);
-            }
-        }
-    });
-    // await page.waitForSelector('table');
-
+  // === Extract Table ===
+  const tableData = await page.evaluate(() => {
     function tableToJson(table) {
-        var data = [];
+      const data = [];
+      const headers = [];
 
-        // Remove the first two rows from the thead
-        table.querySelector('thead tr:nth-child(1)').remove();
-        table.querySelector('thead tr:nth-child(1)').remove();
+      // Get headers
+      for (let i = 0; i < table.rows[0].cells.length; i++) {
+        headers[i] = table.rows[0].cells[i].textContent
+          .toLowerCase()
+          .replace(/ /g, '');
+      }
 
-        // first row needs to be headers
-        var headers = [];
-        for (var i = 0; i < table.rows[0].cells.length; i++) {
-            headers[i] = table.rows[0].cells[i].textContent.toLowerCase().replace(/ /gi, '');
+      // Get rows
+      for (let i = 1; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowData = {};
+        for (let j = 0; j < row.cells.length; j++) {
+          rowData[headers[j]] = row.cells[j].textContent.trim();
         }
-
-        // go through cells
-        for (var i = 1; i < table.rows.length; i++) {
-            var tableRow = table.rows[i];
-            var rowData = {};
-
-            for (var j = 0; j < tableRow.cells.length; j++) {
-                rowData[headers[j]] = tableRow.cells[j].textContent;
-            }
-
-            data.push(rowData);
-        }
-
-        return data;
+        data.push(rowData);
+      }
+      return data;
     }
 
-    function exportToExcel(jsonData, fileName) {
-        var worksheet = XLSX.utils.json_to_sheet(jsonData);
-        var workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-        XLSX.writeFile(workbook, fileName + '.xlsx');
-    }
+    const table = document.querySelector('table');
+    return table ? tableToJson(table) : [];
+  });
 
-    // Extract table data
-    await page.evaluate(() => {
-        var table = document.querySelector('table');
-        var jsonData = tableToJson(table);
-        exportToExcel(jsonData, 'output');
+  console.log(`📊 Extracted ${tableData.length} rows`);
 
-        // Filter out the first two rows
-        // const filteredRows = rows.slice(2);
+  // === Export to Excel ===
+  if (!fs.existsSync('excel')) fs.mkdirSync('excel');
+  const fileName = `excel/output_${moment().format('YYYYMMDD_HHmmss')}.xlsx`;
+  const worksheet = XLSX.utils.json_to_sheet(tableData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+  XLSX.writeFile(workbook, fileName);
 
-        // // Map each row to an array of its cell values
-        // const data = filteredRows.map(row => {
-        //     return Array.from(row.querySelectorAll('td')).map(cell => cell.textContent.trim());
-        // });
+  console.log(`✅ Data exported to ${fileName}`);
 
-        // // Convert the data into CSV format
-        // let csvData = data.map(row => row.join(','));
-        // csvData = csvData.join('\n');
-
-        // fs.writeFileSync('table_data.csv', tableData());
-    });
-
-    // Save the CSV data to a file
-
-    console.log('Table data saved to table_data.csv');
-
-    // await browser.close();
+  await browser.close();
 })();
