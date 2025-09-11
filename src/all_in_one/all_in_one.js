@@ -230,8 +230,6 @@ function delay(milliseconds) {
 
     console.log('Display Activity clicked');
 
-    console.log('All Tasks completed');
-
     return;
 
     // Wait for some action to complete (if necessary)
