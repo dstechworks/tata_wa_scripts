@@ -37,15 +37,16 @@ function delay(milliseconds) {
 
     // await deleteExcelFilesInDirectory();
 
-    // Launch the browser and open a new blank page
     const browser = await firefox.launch({ headless: true });
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+        viewport: { width: 800, height: 600, deviceScaleFactor: 0.5 }
+    });
+    const page = await context.newPage();
 
-    await page.goto('https://iads.ibccube.in/SSRT/app', { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-    // Set screen size
-    // await page.setViewport({ width: 1080, height: 1600 });
-    await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 0.5 });
+    await page.goto('https://iads.ibccube.in/SSRT/app', {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+    });
 
     // Type into login page
     await page.waitForSelector('#account_id');
@@ -58,7 +59,7 @@ function delay(milliseconds) {
     await delay(1000);
     await page.click('.button.active');
 
-    console.log('Login successful');    
+    console.log('Login successful');
 
     await page.waitForSelector('#moduleselected');
     await page.click('body');
