@@ -1,8 +1,14 @@
+const { TATA_BASE_URL, AUTH_TOKEN } = require('./constants');
 const axios = require('axios');
-require('dotenv').config();
+// require('dotenv').config();
 
-let baseUrl = process.env.TATA_BASE_URL;
-let authToken = process.env.AUTH_TOKEN;
+// let baseUrl = process.env.TATA_BASE_URL;
+// let authToken = process.env.AUTH_TOKEN;
+
+let baseUrl = TATA_BASE_URL;
+let authToken = AUTH_TOKEN;
+
+// console.log(` Base URL: ${baseUrl} , Auth Token: ${authToken}`);
 
 const getStatusText = (active = 0, inactive = 0) => `${active} (Active) / ${inactive} (Inactive)`;
 

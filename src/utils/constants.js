@@ -1,3 +1,5 @@
+let TATA_BASE_URL = "https://wb.omni.tatatelebusiness.com";
+let AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwaG9uZU51bWJlciI6Iis5MTc4Mjc5NDM0NzYiLCJwaG9uZU51bWJlcklkIjoiNDY0MjgxNDcwMTA3NTA5IiwiaWF0IjoxNzMxNjY2ODE2fQ.kPVMzdR-7atWWHMIj5TgXk17PT3rE2gF3L0WdE8kWSM";
 let mpduBranchWisePOCNum = {
     "NLUC": {
         "Vinay Jaiswal": "8377980245",
@@ -92,7 +94,7 @@ let mpduBranchWisePOCNum = {
     },
     "NDEL": {
         "Amit Srivastava": "9792251777",
-        "Devendra Gupta":"8506993808",
+        "Devendra Gupta": "8506993808",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
@@ -118,4 +120,4 @@ let mpduBranchWisePOCNum = {
     }
 };
 
-module.exports = mpduBranchWisePOCNum;
+module.exports = { mpduBranchWisePOCNum, TATA_BASE_URL, AUTH_TOKEN };
