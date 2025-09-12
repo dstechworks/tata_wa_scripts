@@ -10,18 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code with PAT
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-
-      - name: Set up SSH
+      # 1️⃣ Setup SSH for GitHub (Account SSH Key)
+      - name: Setup GitHub SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      # 2️⃣ Checkout private repo using SSH key
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          repository: username/your-private-repo  # change to your repo
+          path: repo
+
+      # 3️⃣ Setup SSH for server
+      - name: Setup Server SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_server
+          chmod 600 ~/.ssh/id_server
           ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
-      - name: Run Deploy Script on Server
+      # 4️⃣ Run deploy script on server
+      - name: Deploy to Server
         run: |
-          ssh root@165.22.218.65 'bash -s' < ./deploy.sh
+          ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
