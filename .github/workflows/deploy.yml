@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Setup SSH for GitHub (Account SSH Key)
+      # Setup GitHub SSH (for repo checkout)
       - name: Setup GitHub SSH
         run: |
           mkdir -p ~/.ssh
@@ -18,25 +18,17 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      # 1️⃣a Debug SSH to GitHub
+      # Debug GitHub SSH
       - name: Debug SSH to GitHub
         run: ssh -i ~/.ssh/id_ed25519 -T git@github.com
 
-      # 2️⃣ Checkout current private repo using SSH key
-      - name: Checkout Current Repo
+      # Checkout private repo
+      - name: Checkout Repo
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3️⃣ Optional: Checkout additional private repo(s)
-      # - name: Checkout Another Repo
-      #   uses: actions/checkout@v4
-      #   with:
-      #     ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     repository: hiteshtechworks/another-private-repo
-      #     path: another-repo
-
-      # 4️⃣ Setup SSH for server
+      # Setup server SSH
       - name: Setup Server SSH
         run: |
           mkdir -p ~/.ssh
@@ -44,7 +36,10 @@ jobs:
           chmod 600 ~/.ssh/id_server
           ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
-      # 5️⃣ Run deploy script on server
+      # Debug server SSH
+      - name: Debug SSH to Server
+        run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 "echo 'SSH to server works'"
+
+      # Deploy to server
       - name: Deploy to Server
-        run: |
-          ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
+        run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
