@@ -18,6 +18,10 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
+      # 1️⃣a Debug SSH to GitHub
+      - name: Debug SSH to GitHub
+        run: ssh -i ~/.ssh/id_ed25519 -T git@github.com
+
       # 2️⃣ Checkout current private repo using SSH key
       - name: Checkout Current Repo
         uses: actions/checkout@v4
