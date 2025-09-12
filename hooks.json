@@ -1,0 +1,18 @@
+[
+    {
+        "id": "deploy",
+        "execute-command": "/root/tata_wa_scripts/deploy.sh",
+        "command-working-directory": "/root/tata_wa_scripts",
+        "response-message": "Deploy script executed",
+        "trigger-rule": {
+            "match": {
+                "type": "value",
+                "value": "TECHWORKS_SECRET_KEY",
+                "parameter": {
+                    "source": "url",
+                    "name": "token"
+                }
+            }
+        }
+    }
+]
