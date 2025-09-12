@@ -51,7 +51,7 @@ cron.schedule('0 17 * * 1-6', () => {
 });
 
 //Testing the cron jobs
-console.log('Cron jobs started');
+console.log(`Cron jobs started at ${moment().tz(TIMEZONE).format('YYYY-MM-DD HH:mm:ss')}`);
 
 // Run a script manually if i want to runscript manually without using cron
 // runScript('Techworks Tab', 'src/techworks_tab/techworks_tab.js');
