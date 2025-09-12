@@ -43,3 +43,7 @@ jobs:
       # Deploy to server
       - name: Deploy to Server
         run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
+
+
+
+
