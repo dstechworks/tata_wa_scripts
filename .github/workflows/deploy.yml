@@ -18,15 +18,21 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      # 2️⃣ Checkout private repo using SSH key
-      - name: Checkout Repo
+      # 2️⃣ Checkout current private repo using SSH key
+      - name: Checkout Current Repo
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          repository: username/your-private-repo  # change to your repo
-          path: repo
 
-      # 3️⃣ Setup SSH for server
+      # 3️⃣ Optional: Checkout additional private repo(s)
+      # - name: Checkout Another Repo
+      #   uses: actions/checkout@v4
+      #   with:
+      #     ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     repository: hiteshtechworks/another-private-repo
+      #     path: another-repo
+
+      # 4️⃣ Setup SSH for server
       - name: Setup Server SSH
         run: |
           mkdir -p ~/.ssh
@@ -34,7 +40,7 @@ jobs:
           chmod 600 ~/.ssh/id_server
           ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
-      # 4️⃣ Run deploy script on server
+      # 5️⃣ Run deploy script on server
       - name: Deploy to Server
         run: |
           ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
