@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - production  # 🔁 Change to your deployment branch if needed
+      - production
 
 jobs:
   deploy:
@@ -12,14 +12,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts  # 🔁 Replace IP
+          ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
       - name: Run Deploy Script on Server
         run: |
-          ssh root@165.22.218.65 'bash -s' < ./deploy.sh  # 🔁 Replace user, IP, and script path
+          ssh root@165.22.218.65 'bash -s' < ./deploy.sh
