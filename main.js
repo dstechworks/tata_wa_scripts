@@ -50,10 +50,6 @@ cron.schedule('0 17 * * 1-6', () => {
     }, { timezone: TIMEZONE });
 });
 
-// console.log('Cron jobs started');
-// testing the cron jobs
-// console.log('Cron jobs started');
-
 // Run a script manually if i want to runscript manually without using cron
 // runScript('Techworks Tab', 'src/techworks_tab/techworks_tab.js');
 // runScript('Techworks Backwall', 'src/techworks_backwall/techworks_backwall.js');
