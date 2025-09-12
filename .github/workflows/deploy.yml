@@ -1,5 +1,6 @@
 name: Deploy to Server
 
+# Trigger only on push to production branch
 on:
   push:
     branches:
@@ -10,25 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Setup GitHub SSH for repo checkout
-      - name: Setup GitHub SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-      # 2️⃣ Debug GitHub SSH
-      - name: Debug SSH to GitHub
-        run: ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no -T git@github.com || true
-
-      # 3️⃣ Checkout private repo
-      - name: Checkout Repo
+      # 1️⃣ Checkout the repo (using SSH key for private repo)
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          persist-credentials: false
 
-      # 4️⃣ Setup server SSH
+      # 2️⃣ Setup SSH to server
       - name: Setup Server SSH
         run: |
           mkdir -p ~/.ssh
@@ -36,10 +26,10 @@ jobs:
           chmod 600 ~/.ssh/id_server
           ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
-      # 5️⃣ Debug SSH to server
-      - name: Debug SSH to Server
-        run: ssh -vvv -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 "echo 'SSH works!'"
+      # 3️⃣ Debug SSH connection to server
+      - name: Test SSH to Server
+        run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 "echo 'SSH connection OK'"
 
-      # 6️⃣ Deploy to server
+      # 4️⃣ Run deploy script on server
       - name: Deploy to Server
         run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
