@@ -1,6 +1,6 @@
 name: Deploy to Server
 
-# Trigger only on push to production branch
+# Trigger only when code is pushed to production
 on:
   push:
     branches:
@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repo (using SSH key for private repo)
+      # 1️⃣ Checkout the repo (private repo)
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
           persist-credentials: false
 
-      # 2️⃣ Setup SSH to server
+      # 2️⃣ Setup SSH for server
       - name: Setup Server SSH
         run: |
           mkdir -p ~/.ssh
@@ -26,10 +26,12 @@ jobs:
           chmod 600 ~/.ssh/id_server
           ssh-keyscan -H 165.22.218.65 >> ~/.ssh/known_hosts
 
-      # 3️⃣ Debug SSH connection to server
-      - name: Test SSH to Server
-        run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 "echo 'SSH connection OK'"
+      # 3️⃣ Debug SSH connection
+      - name: Test SSH Connection
+        run: |
+          ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 "echo 'SSH works!'"
 
-      # 4️⃣ Run deploy script on server
-      - name: Deploy to Server
-        run: ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
+      # 4️⃣ Deploy to server
+      - name: Run Deploy Script
+        run: |
+          ssh -i ~/.ssh/id_server -o StrictHostKeyChecking=no root@165.22.218.65 'bash -s' < ./deploy.sh
