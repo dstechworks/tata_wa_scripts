@@ -8,6 +8,9 @@ cd ~/tata_wa_scripts || exit 1
 # Stop the app using PM2
 pm2 stop 0 >> /tmp/deploy.log 2>&1
 
+# Remove src
+rm -rf src
+
 # Pull latest code from production
 git pull git@github.com:dstechworks/tata_wa_scripts.git production >> /tmp/deploy.log 2>&1
 
