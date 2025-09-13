@@ -1,6 +1,6 @@
 const { mpduNationalMsg, mpduBranchMsg, vertical43InchNationalMsg, vertical43InchBranchMsg } = require('../utils/whatsappMsgTempUtils');
+const { mpduBranchWisePOCNum } = require('../utils/constants');
 const { delay } = require('../utils/helpers');
-const mpduBranchWisePOCNum = require('../utils/constants');
 const querystring = require('querystring');
 const moment = require('moment-timezone');
 const { google } = require('googleapis');
