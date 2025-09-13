@@ -32,6 +32,7 @@ curl -fsS --retry 3 "$HC_PING_UP/start" > /dev/null || true
 # === STEP 1: Pull Latest Code ===
 echo "📥 Fetching latest code from origin/$BRANCH..." >> "$LOG_FILE"
 
+# Fetch latest
 git fetch origin "$BRANCH" || {
   echo "❌ ERROR: git fetch failed" >> "$LOG_FILE"
   echo "💡 Check: SSH keys, internet, or repo URL" >> "$LOG_FILE"
@@ -39,20 +40,25 @@ git fetch origin "$BRANCH" || {
   exit 1
 }
 
+# 💥 Force cleanup: discard all local changes
+echo "🧹 Forcing clean state: resetting and cleaning..." >> "$LOG_FILE"
+git reset --hard origin/"$BRANCH" >> "$LOG_FILE" 2>&1 || {
+  echo "❌ ERROR: Could not reset to origin/$BRANCH" >> "$LOG_FILE"
+  curl -fsS --retry 3 "$HC_PING_FAIL" > /dev/null || true
+  exit 1
+}
+
+# Remove untracked files/folders
+git clean -fd >> "$LOG_FILE" 2>&1 || {
+  echo "⚠️ Warning: git clean failed" >> "$LOG_FILE"
+}
+
+# Ensure we are on correct branch
 git checkout "$BRANCH" || {
   echo "❌ ERROR: Failed to checkout $BRANCH" >> "$LOG_FILE"
   curl -fsS --retry 3 "$HC_PING_FAIL" > /dev/null || true
   exit 1
 }
-
-git reset --hard origin/"$BRANCH" || {
-  echo "❌ ERROR: git reset failed" >> "$LOG_FILE"
-  curl -fsS --retry 3 "$HC_PING_FAIL" > /dev/null || true
-  exit 1
-}
-
-# Clean up untracked files (optional)
-git clean -fd >> "$LOG_FILE" 2>&1
 
 # === STEP 2: Install Dependencies ===
 echo "🗑️ Removing old node_modules..." >> "$LOG_FILE"
