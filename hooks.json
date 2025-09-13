@@ -1,8 +1,12 @@
 [
     {
         "id": "deploy",
-        "execute-command": "/root/tata_wa_scripts/deploy.sh",
-        "command-working-directory": "/root/tata_wa_scripts",
+        "execute-command": "/bin/sh",
+        "command-working-directory": "/tmp",
+        "command-arguments": [
+            "-c",
+            "echo '🚨 Webhook triggered at $(date)' >> /tmp/webhook.log && echo 'Token: $TOKEN' >> /tmp/webhook.log && /root/tata_wa_scripts/deploy.sh"
+        ],
         "response-message": "Deploy script executed",
         "trigger-rule": {
             "match": {
