@@ -50,7 +50,6 @@ cron.schedule('0 17 * * 1-6', () => {
     }, { timezone: TIMEZONE });
 });
 
-// Testing log added here
 console.log(`Cron jobs started at ${moment().tz(TIMEZONE).format('YYYY-MM-DD hh:mm:ss A')}`);
 
 // Run a script manually if i want to runscript manually without using cron
