@@ -1,26 +1,27 @@
 #!/bin/bash
-
-# Log deployment start
 echo "===== DEPLOY STARTED at $(date) =====" >> /tmp/deploy.log
 
-cd ~/tata_wa_scripts || exit 1
+cd ~/tata_wa_scripts || {
+  echo "❌ ERROR: Could not cd into project folder" >> /tmp/deploy.log
+  exit 1
+}
 
-# Stop the app using PM2
-pm2 stop 0 >> /tmp/deploy.log 2>&1
+# Stop the app by name
+pm2 stop tata-wa >> /tmp/deploy.log 2>&1 || echo "App not running" >> /tmp/deploy.log
 
-# Remove src
-rm -rf src
+# Clean old code
+rm -rf /root/tata_wa_scripts/node_modules >> /tmp/deploy.log 2>&1
+rm -rf /root/tata_wa_scripts/src >> /tmp/deploy.log 2>&1
 
-# Pull latest code from production
-git pull git@github.com:dstechworks/tata_wa_scripts.git production >> /tmp/deploy.log 2>&1
-
-# Remove node_modules
-rm -rf node_modules
+# Reset repo & pull latest
+git reset --hard >> /tmp/deploy.log 2>&1
+git checkout production >> /tmp/deploy.log 2>&1
+git pull origin production >> /tmp/deploy.log 2>&1
 
 # Install dependencies
-npm install >> /tmp/deploy.log 2>&1
+npm install --production >> /tmp/deploy.log 2>&1
 
-# Restart the app using PM2
-pm2 start 0 >> /tmp/deploy.log 2>&1
+# Restart app
+pm2 restart tata-wa >> /tmp/deploy.log 2>&1 || pm2 start main.js --name tata-wa
 
 echo "===== DEPLOY COMPLETED at $(date) =====" >> /tmp/deploy.log
