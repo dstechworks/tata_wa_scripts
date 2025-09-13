@@ -7,21 +7,21 @@ cd ~/tata_wa_scripts || {
 }
 
 # Stop the app by name
-pm2 stop tata-wa >> /tmp/deploy.log 2>&1 || echo "App not running" >> /tmp/deploy.log
+pm2 stop 0 >> /tmp/deploy.log 2>&1 || echo "App not running" >> /tmp/deploy.log
 
 # Clean old code
 rm -rf /root/tata_wa_scripts/node_modules >> /tmp/deploy.log 2>&1
 rm -rf /root/tata_wa_scripts/src >> /tmp/deploy.log 2>&1
 
-# Reset repo & pull latest
-git reset --hard >> /tmp/deploy.log 2>&1
-git checkout production >> /tmp/deploy.log 2>&1
-git pull git@github.com:dstechworks/tata_wa_scripts.git production >> /tmp/deploy.log 2>&1
+# Make sure we are on production
+git fetch origin production
+git checkout production
+git reset --hard origin/production
 
 # Install dependencies
-npm install --production >> /tmp/deploy.log 2>&1
+npm install >> /tmp/deploy.log 2>&1
 
 # Restart app
-pm2 restart tata-wa >> /tmp/deploy.log 2>&1 || pm2 start main.js --name tata-wa
+pm2 restart 0 >> /tmp/deploy.log 2>&1 || pm2 start 0 --name tata-wa
 
 echo "===== DEPLOY COMPLETED at $(date) =====" >> /tmp/deploy.log
