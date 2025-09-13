@@ -684,4 +684,7 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
     console.log("=====================================================================");
 }
 
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+
 startScript();
