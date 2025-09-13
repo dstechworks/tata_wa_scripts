@@ -25,8 +25,8 @@ function runScript(name, path) {
     });
 }
 
-// Mon–Sat @ 11:55 AM: Run all 5 scripts
-cron.schedule('0 11 * * 1-6', () => {
+// Mon–Sat @ 12:16 AM: Run all 5 scripts
+cron.schedule('16 12 * * 1-6', () => {
     runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 10 AM
     runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 10 AM
     runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 10 AM
@@ -44,7 +44,7 @@ cron.schedule('0 17 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Daily @ 12:00 PM and 5:00 PM: Run MPDU 43 Vertical
-['0 12 * * *', '0 17 * * *'].forEach(schedule => {
+['16 12 * * *', '0 17 * * *'].forEach(schedule => {
     cron.schedule(schedule, () => {
         runScript('MPDU 43 Vertical', '~/tata_wa_scripts/src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
     }, { timezone: TIMEZONE });
