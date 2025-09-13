@@ -3,6 +3,8 @@ const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper
 const moment = require('moment-timezone');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
+const path = require('path');
+
 
 const pool = new Pool({
     user: "postgres",
@@ -29,10 +31,12 @@ const currentTime = moment().tz("Asia/Kolkata");
 // Google Sheets data fetching
 // =================================================================================================
 async function getBaseDataFromGoogleSheets() {
+    const keyFilePath = path.join(__dirname, '../../credentials.json');
+
     const accessGoogleSheet = async () => {
         try {
             const auth = new google.auth.GoogleAuth({
-                keyFile: "./credentials.json",
+                keyFile: keyFilePath,
                 scopes: ["https://www.googleapis.com/auth/spreadsheets"],
             });
             const authClientObject = await auth.getClient();

@@ -348,7 +348,7 @@ async function send43InchMorningMessage(dbData) {
             dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
         });
 
-        if (uniqueBranchCodes.length == 8) {
+        if (uniqueBranchCodes.length == 9) {
             workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
                 const findDeviceByTechworksId = dbData.find(d => d.display_name == deviceIdElement['Techworks ID']);
                 const branchCode = deviceIdElement['Branch Code'];

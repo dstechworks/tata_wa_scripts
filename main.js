@@ -25,8 +25,8 @@ function runScript(name, path) {
     });
 }
 
-// Mon–Sat @ 12:16 AM: Run all 5 scripts
-cron.schedule('16 12 * * 1-6', () => {
+// Mon–Sat @ 10:00 AM: Run all 5 scripts
+cron.schedule('0 10 * * 1-6', () => {
     runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 10 AM
     runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 10 AM
     runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 10 AM
