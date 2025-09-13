@@ -1,51 +1,41 @@
 [
     {
-      "id": "deploy",
-      "execute-command": "/bin/sh",
-      "command-working-directory": "/root/tata_wa_scripts",
-      "command-arguments": [
-        "-c",
-        "echo '🎯 WEBHOOK TRIGGERED at $(date)' >> /tmp/webhook.log && echo 'Event: $GITHUB_EVENT | Branch: $BRANCH_REF' >> /tmp/webhook.log && if [ \"$BRANCH_REF\" = \"refs/heads/production\" ]; then echo '✅ Matched production → Starting deploy...' >> /tmp/webhook.log && ./deploy.sh >> /tmp/deploy.log 2>&1 && echo '🟢 Deploy script finished' >> /tmp/webhook.log; else echo '🟨 Skipped: Not production (ref=$BRANCH_REF)' >> /tmp/webhook.log; fi"
-      ],
-      "response-message": "Webhook processed",
-      "include-command-output-in-response": true,
-      "pass-environment-to-command": [
-        {
-          "source": "payload",
-          "name": "ref",
-          "target": "BRANCH_REF"
-        },
-        {
-          "source": "headers",
-          "name": "X-GitHub-Event",
-          "target": "GITHUB_EVENT"
-        },
-        {
-          "source": "payload",
-          "name": "head_commit.message",
-          "target": "COMMIT_MSG"
-        },
-        {
-          "source": "payload",
-          "name": "pusher.name",
-          "target": "PUSHER"
+        "id": "deploy",
+        "execute-command": "/bin/sh",
+        "command-working-directory": "/root/tata_wa_scripts",
+        "command-arguments": [
+            "-c",
+            "echo '🎯 WEBHOOK FIRED: $(date)' >> /tmp/webhook.log && echo 'Ref: $REF | Event: $EVENT' >> /tmp/webhook.log && if [ \"$REF\" = \"refs/heads/production\" ]; then echo '✅ Deploying production...' >> /tmp/webhook.log && ./deploy.sh >> /tmp/deploy.log 2>&1 && echo '🟢 Deploy finished' >> /tmp/webhook.log; else echo '🟨 Skipped: $REF' >> /tmp/webhook.log; fi"
+        ],
+        "response-message": "Webhook processed",
+        "include-command-output-in-response": true,
+        "pass-environment-to-command": [
+            {
+                "source": "payload",
+                "name": "ref",
+                "target": "REF"
+            },
+            {
+                "source": "headers",
+                "name": "X-GitHub-Event",
+                "target": "EVENT"
+            }
+        ],
+        "trigger-rule": {
+            "and": [
+                {
+                    "equal": {
+                        "string": "{{payload.ref}}",
+                        "value": "refs/heads/production"
+                    }
+                },
+                {
+                    "equal": {
+                        "string": "{{headers.X-GitHub-Event}}",
+                        "value": "push"
+                    }
+                }
+            ]
         }
-      ],
-      "trigger-rule": {
-        "and": [
-          {
-            "equal": {
-              "string": "{{payload.ref}}",
-              "value": "refs/heads/production"
-            }
-          },
-          {
-            "equal": {
-              "string": "{{headers.X-GitHub-Event}}",
-              "value": "push"
-            }
-          }
-        ]
-      }
     }
-  ]
+]
