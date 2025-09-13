@@ -1,22 +1,51 @@
 [
     {
-        "id": "deploy",
-        "execute-command": "/bin/sh",
-        "command-working-directory": "/tmp",
-        "command-arguments": [
-            "-c",
-            "echo '🚨 Webhook triggered at $(date)' >> /tmp/webhook.log && echo 'Token: $TOKEN' >> /tmp/webhook.log && /root/tata_wa_scripts/deploy.sh"
-        ],
-        "response-message": "Deploy script executed",
-        "trigger-rule": {
-            "match": {
-                "type": "value",
-                "value": "TECHWORKS_SECRET_KEY",
-                "parameter": {
-                    "source": "url",
-                    "name": "token"
-                }
-            }
+      "id": "deploy",
+      "execute-command": "/bin/sh",
+      "command-working-directory": "/root/tata_wa_scripts",
+      "command-arguments": [
+        "-c",
+        "echo '🎯 WEBHOOK TRIGGERED at $(date)' >> /tmp/webhook.log && echo 'Event: $GITHUB_EVENT | Branch: $BRANCH_REF' >> /tmp/webhook.log && if [ \"$BRANCH_REF\" = \"refs/heads/production\" ]; then echo '✅ Matched production → Starting deploy...' >> /tmp/webhook.log && ./deploy.sh >> /tmp/deploy.log 2>&1 && echo '🟢 Deploy script finished' >> /tmp/webhook.log; else echo '🟨 Skipped: Not production (ref=$BRANCH_REF)' >> /tmp/webhook.log; fi"
+      ],
+      "response-message": "Webhook processed",
+      "include-command-output-in-response": true,
+      "pass-environment-to-command": [
+        {
+          "source": "payload",
+          "name": "ref",
+          "target": "BRANCH_REF"
+        },
+        {
+          "source": "headers",
+          "name": "X-GitHub-Event",
+          "target": "GITHUB_EVENT"
+        },
+        {
+          "source": "payload",
+          "name": "head_commit.message",
+          "target": "COMMIT_MSG"
+        },
+        {
+          "source": "payload",
+          "name": "pusher.name",
+          "target": "PUSHER"
         }
+      ],
+      "trigger-rule": {
+        "and": [
+          {
+            "equal": {
+              "string": "{{payload.ref}}",
+              "value": "refs/heads/production"
+            }
+          },
+          {
+            "equal": {
+              "string": "{{headers.X-GitHub-Event}}",
+              "value": "push"
+            }
+          }
+        ]
+      }
     }
-]
+  ]
