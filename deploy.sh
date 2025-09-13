@@ -55,6 +55,12 @@ git reset --hard origin/"$BRANCH" || {
 git clean -fd >> "$LOG_FILE" 2>&1
 
 # === STEP 2: Install Dependencies ===
+echo "🗑️ Removing old node_modules..." >> "$LOG_FILE"
+rm -rf node_modules >> "$LOG_FILE" 2>&1 || {
+  echo "⚠️ Warning: Could not remove node_modules (might not exist yet)" >> "$LOG_FILE"
+}
+
+# === STEP 3: Install Dependencies ===
 echo "📦 Installing npm dependencies..." >> "$LOG_FILE"
 npm install --production >> "$LOG_FILE" 2>&1 || {
   echo "❌ ERROR: npm install failed" >> "$LOG_FILE"
@@ -63,7 +69,7 @@ npm install --production >> "$LOG_FILE" 2>&1 || {
   exit 1
 }
 
-# === STEP 3: Restart PM2 App Safely ===
+# === STEP 4: Restart PM2 App Safely ===
 echo "🔁 Restarting PM2 app: $PM2_APP_NAME" >> "$LOG_FILE"
 
 # Start from config if first time, else restart
