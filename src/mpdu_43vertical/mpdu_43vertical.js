@@ -684,4 +684,5 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
     console.log("=====================================================================");
 }
 
+// Testing log added here
 startScript();
