@@ -16,7 +16,7 @@ rm -rf /root/tata_wa_scripts/src >> /tmp/deploy.log 2>&1
 # Reset repo & pull latest
 git reset --hard >> /tmp/deploy.log 2>&1
 git checkout production >> /tmp/deploy.log 2>&1
-git pull origin production >> /tmp/deploy.log 2>&1
+git pull git@github.com:dstechworks/tata_wa_scripts.git production >> /tmp/deploy.log 2>&1
 
 # Install dependencies
 npm install --production >> /tmp/deploy.log 2>&1
