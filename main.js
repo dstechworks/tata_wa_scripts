@@ -55,6 +55,10 @@ console.log(`Cron jobs started at ${moment().tz(TIMEZONE).format('YYYY-MM-DD hh:
 // Testing log added here
 console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
 console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
+console.log("MPDU 43 VERTICAL SCRIPT RUNNING");
 
 // Run a script manually if i want to runscript manually without using cron
 // runScript('Techworks Tab', 'src/techworks_tab/techworks_tab.js');
