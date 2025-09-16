@@ -170,7 +170,7 @@ async function sendMessage() {
         let backwallTotalCount = 0;
         let AEDevice = {}
         let NationalPOCNum = {
-            "Hitesh": "8700685675",
+            // "Hitesh": "8700685675",
             // "Dhruv": "8826909378",
             // "Sumit": "8920131195",
             // "Pratek": "9818429501",
@@ -306,23 +306,23 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             await delay(10000);
         }
 
-        for (let key in NationalPOCNum) {
-            let phoneNum = `+91${NationalPOCNum[key]}`;
-            // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
-            if (isMessageSent) {
-                let nationalMsgRes = await nationalMsg("national_common", "IBC-BACKWALL", phoneNum, zone);
-                console.log(`${key} ---> ${nationalMsgRes}`);
-                ++backwallTotalCount;
-                await delay(500);
-            }
-        }
+        // for (let key in NationalPOCNum) {
+        //     let phoneNum = `+91${NationalPOCNum[key]}`;
+        //     // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
+        //     if (isMessageSent) {
+        //         let nationalMsgRes = await nationalMsg("national_common", "IBC-BACKWALL", phoneNum, zone);
+        //         console.log(`${key} ---> ${nationalMsgRes}`);
+        //         ++backwallTotalCount;
+        //         await delay(500);
+        //     }
+        // }
 
-        console.log("\n");
-        console.log('*************************** National Messages Done ************************', "\n");
-        console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
-        if (isMessageSent) {
-            await delay(1000);
-        }
+        // console.log("\n");
+        // console.log('*************************** National Messages Done ************************', "\n");
+        // console.log("TOTAL MESSAGE COUNT = ", backwallTotalCount);
+        // if (isMessageSent) {
+        //     await delay(1000);
+        // }
 
 
 

@@ -226,7 +226,7 @@ async function startScript() {
         let TLDevice = [];
         let totalDevices = 0;
         let NationalPOCNum = {
-            "Hitesh": "8700685675",
+            // "Hitesh": "8700685675",
             // "Dhruv": "8826909378",
             // "Sumit": "8920131195",
             // "Pratek": "9818429501",
@@ -375,24 +375,24 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             await delay(7000);
         }
 
-        for (let key in NationalPOCNum) {
-            let phoneNum = `+91${NationalPOCNum[key]}`;
-            // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
+        // for (let key in NationalPOCNum) {
+        //     let phoneNum = `+91${NationalPOCNum[key]}`;
+        //     // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            if (isMessageSent) {
-                let nationalMsgRes = await nationalMsg("national_common", "TECHWORKS-BACKWALL", phoneNum, zone);
-                console.log(`${key} ---> ${nationalMsgRes}`);
-                ++twBackwallTotalCount;
-                await delay(500);
-            }
-        }
+        //     if (isMessageSent) {
+        //         let nationalMsgRes = await nationalMsg("national_common", "TECHWORKS-BACKWALL", phoneNum, zone);
+        //         console.log(`${key} ---> ${nationalMsgRes}`);
+        //         ++twBackwallTotalCount;
+        //         await delay(500);
+        //     }
+        // }
 
-        console.log("\n");
-        console.log('*************************** National Messages Done ************************', "\n");
-        console.log("TOTAL MESSAGE COUNT = ", twBackwallTotalCount);
-        if (isMessageSent) {
-            await delay(2000);
-        }
+        // console.log("\n");
+        // console.log('*************************** National Messages Done ************************', "\n");
+        // console.log("TOTAL MESSAGE COUNT = ", twBackwallTotalCount);
+        // if (isMessageSent) {
+        //     await delay(2000);
+        // }
 
 
         ////////-------------------------------- Send District Message ----------------------------/////////

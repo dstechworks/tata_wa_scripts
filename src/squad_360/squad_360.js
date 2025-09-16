@@ -185,7 +185,7 @@ const startMessages = async (data) => {
     let AEDevice = {};
     let TLDevice = [];
     let NationalPOCNum = {
-        "Hitesh": "8700685675",
+        // "Hitesh": "8700685675",
         // "Dhruv": "8826909378",
         // "Sumit": "8920131195",
         // "Pratek": "9818429501",
@@ -348,24 +348,24 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         await delay(7000);
     }
 
-    for (let key in NationalPOCNum) {
-        let phoneNum = `+91${NationalPOCNum[key]}`;
-        // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
+    // for (let key in NationalPOCNum) {
+    //     let phoneNum = `+91${NationalPOCNum[key]}`;
+    //     // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-        if (isMessageSent) {
-            let nationalMsgRes = await nationalMsg("national_common", "SQUAD-360", phoneNum, zone);
-            console.log(`${key} ---> ${nationalMsgRes}`);
-            ++squad360TotalCount;
-            await delay(500);
-        }
-    }
+    //     if (isMessageSent) {
+    //         let nationalMsgRes = await nationalMsg("national_common", "SQUAD-360", phoneNum, zone);
+    //         console.log(`${key} ---> ${nationalMsgRes}`);
+    //         ++squad360TotalCount;
+    //         await delay(500);
+    //     }
+    // }
 
-    console.log("\n");
-    console.log('*************************** National Messages Done ************************', "\n");
-    console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
-    if (isMessageSent) {
-        await delay(1000);
-    }
+    // console.log("\n");
+    // console.log('*************************** National Messages Done ************************', "\n");
+    // console.log("TOTAL MESSAGE COUNT = ", squad360TotalCount);
+    // if (isMessageSent) {
+    //     await delay(1000);
+    // }
 
     ////////-------------------------------- Send District Message ----------------------------/////////
     // console.log(allBranches);

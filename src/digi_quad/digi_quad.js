@@ -192,7 +192,7 @@ async function startScript() {
         let AEDevice = {}
         let TLDevice = [];
         let NationalPOCNum = {
-            "Hitesh": "8700685675",
+            // "Hitesh": "8700685675",
             // "Dhruv": "8826909378",
             // "Sumit": "8920131195",
             // "Pratek": "9818429501",
@@ -365,24 +365,24 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             await delay(7000);
         }
 
-        for (let key in NationalPOCNum) {
-            let phoneNum = `+91${NationalPOCNum[key]}`;
-            // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
+        // for (let key in NationalPOCNum) {
+        //     let phoneNum = `+91${NationalPOCNum[key]}`;
+        //     // console.log(`National POC Name : ${key} , Mobile : ${phoneNum}\n`);
 
-            if (isMessageSent) {
-                let nationalMsgRes = await nationalMsg("national_common", "DIGI-QUAD", phoneNum, zone);
-                console.log(`${key} ---> ${nationalMsgRes}`);
-                ++digiQuadTotalCount;
-                await delay(500);
-            }
-        }
+        //     if (isMessageSent) {
+        //         let nationalMsgRes = await nationalMsg("national_common", "DIGI-QUAD", phoneNum, zone);
+        //         console.log(`${key} ---> ${nationalMsgRes}`);
+        //         ++digiQuadTotalCount;
+        //         await delay(500);
+        //     }
+        // }
 
-        console.log("\n");
-        console.log('*************************** National Messages Done ************************', "\n");
-        console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
-        if (isMessageSent) {
-            await delay(1000);
-        }
+        // console.log("\n");
+        // console.log('*************************** National Messages Done ************************', "\n");
+        // console.log("TOTAL MESSAGE COUNT = ", digiQuadTotalCount);
+        // if (isMessageSent) {
+        //     await delay(1000);
+        // }
 
 
         ////////-------------------------------- Send District Message ----------------------------/////////
