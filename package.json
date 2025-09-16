@@ -4,13 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "1": "node src/ibc_backwall/ibc_backwall.js",
-    "2": "node src/techworks_tab/techworks_tab.js",
-    "3": "node src/techworks_backwall/techworks_backwall.js",
-    "4": "node src/digi_quad/digi_quad.js",
-    "5": "node src/squad_360/squad_360.js",
-    "6": "node src/mpdu_43vertical/mpdu_43vertical.js",
-    "7": "node src/magenta_mobility/magenta_mobility.js"
+    "1": "node src/all_combined_plus_ibc/all_combined_plus_ibc.js",
+    "2": "node src/ibc_backwall/ibc_backwall.js",
+    "3": "node src/techworks_tab/techworks_tab.js",
+    "4": "node src/techworks_backwall/techworks_backwall.js",
+    "5": "node src/digi_quad/digi_quad.js",
+    "6": "node src/squad_360/squad_360.js",
+    "7": "node src/mpdu_43vertical/mpdu_43vertical.js",
+    "8": "node src/magenta_mobility/magenta_mobility.js"
   },
   "keywords": [],
   "author": "",
