@@ -128,10 +128,12 @@ dist
 .pnp.*
 
 # IBC Cubes reports folder
+src/all_combined_plus_ibc/ibc-backwall-daily-files
 src/ibc_backwall/ibc-backwall-daily-files
 src/squad_360/squad-360-daily-files
 
 src/ibc_backwall/ibc-backwall-logs
+src/all_combined_plus_ibc/all-combined-plus-ibc-logs
 
 
 credentials.json
