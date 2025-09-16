@@ -790,6 +790,133 @@ async function magentaMsg(tempName, messageHeadText, phoneNum, obj) {
     return reqAxios;
 }
 
+async function allCombinedSystemsNationalMsg(tempName, phoneNum, dataOfNational) {
+    const parameters = [
+        { type: "text", text: "IBC-BACKWALL" },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.N.active },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.N.inactive },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.S.active },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.S.inactive },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.E.active },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.E.inactive },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.W.active },
+        { type: "text", text: dataOfNational["IBC-BACKWALL"]?.W.inactive },
+        { type: "text", text: "TABLET" },
+        { type: "text", text: dataOfNational["TABLET"]?.N.active },
+        { type: "text", text: dataOfNational["TABLET"]?.N.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.S.active },
+        { type: "text", text: dataOfNational["TABLET"]?.S.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.E.active },
+        { type: "text", text: dataOfNational["TABLET"]?.E.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.W.active },
+        { type: "text", text: dataOfNational["TABLET"]?.W.inactive },
+        { type: "text", text: "SQUAD-360" },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.N.active },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.N.inactive },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.S.active },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.S.inactive },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.E.active },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.E.inactive },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.W.active },
+        { type: "text", text: dataOfNational["SQUAD-360"]?.W.inactive },
+        { type: "text", text: "DIGI-QUAD" },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.N.active },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.N.inactive },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.S.active },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.S.inactive },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.E.active },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.E.inactive },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.W.active },
+        { type: "text", text: dataOfNational["DIGI-QUAD"]?.W.inactive },
+        { type: "text", text: "TECHWORKS-BACKWALL" },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.N.active },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.N.inactive },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.S.active },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.S.inactive },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.E.active },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.E.inactive },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.W.active },
+        { type: "text", text: dataOfNational["TECHWORKS-BACKWALL"]?.W.inactive }
+    ];
+
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [{
+                "type": "body",
+                "parameters": parameters
+            },],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
+async function combinedSingleSystemsNationalMsg(tempName, phoneNum, dataOfNational) {
+    const parameters = [
+        { type: "text", text: "COMBINED" },
+        { type: "text", text: dataOfNational["COMBINED"]?.N.active },
+        { type: "text", text: dataOfNational["COMBINED"]?.N.inactive },
+        { type: "text", text: dataOfNational["COMBINED"]?.S.active },
+        { type: "text", text: dataOfNational["COMBINED"]?.S.inactive },
+        { type: "text", text: dataOfNational["COMBINED"]?.E.active },
+        { type: "text", text: dataOfNational["COMBINED"]?.E.inactive },
+        { type: "text", text: dataOfNational["COMBINED"]?.W.active },
+        { type: "text", text: dataOfNational["COMBINED"]?.W.inactive },
+        { type: "text", text: "TABLET" },
+        { type: "text", text: dataOfNational["TABLET"]?.N.active },
+        { type: "text", text: dataOfNational["TABLET"]?.N.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.S.active },
+        { type: "text", text: dataOfNational["TABLET"]?.S.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.E.active },
+        { type: "text", text: dataOfNational["TABLET"]?.E.inactive },
+        { type: "text", text: dataOfNational["TABLET"]?.W.active },
+        { type: "text", text: dataOfNational["TABLET"]?.W.inactive }
+    ];
+
+    let variables = JSON.stringify({
+        "to": phoneNum,
+        "type": "template",
+        "template": {
+            "name": tempName,
+            "language": {
+                "code": "en"
+            },
+            "components": [{
+                "type": "body",
+                "parameters": parameters
+            },],
+        }
+    });
+
+    let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: `${baseUrl}/whatsapp-cloud/messages`,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authToken
+        },
+        data: variables
+    };
+    return await requestAxios(config);
+}
+
 module.exports = {
     nationalMsg,
     deviceWiseBackwallStatusMsg,
@@ -807,5 +934,7 @@ module.exports = {
     mpduBranchMsg,
     vertical43InchNationalMsg,
     vertical43InchBranchMsg,
-    magentaMsg
+    magentaMsg,
+    allCombinedSystemsNationalMsg,
+    combinedSingleSystemsNationalMsg
 };
