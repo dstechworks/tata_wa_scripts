@@ -331,7 +331,7 @@ const startMessages = async (data) => {
     // console.log(zone);
 
     /////////------------------------------- Send National Message ----------------------------/////////
-    let messageBodyNP = `NATIONAL SQUARD-360 STATUS
+    let messageBodyNP = `NATIONAL SQUAD-360 STATUS
 North : ${zone.N.active} (Active) / ${zone.N.inactive} (Inactive)
 South : ${zone.S.active} (Active) / ${zone.S.inactive} (Inactive)
 East  : ${zone.E.active} (Active) / ${zone.E.inactive} (Inactive)

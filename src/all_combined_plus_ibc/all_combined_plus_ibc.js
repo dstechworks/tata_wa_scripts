@@ -29,6 +29,7 @@ const pool = new Pool({
 
 const baseSpreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
 const ibcCubesSpreadsheetId = "1cJ4taK4D7DClu6XBpVQeZFcsE4gvh9PkJkLP_J8QRkU";
+const techworksTabSpreadsheetId = "1bu-l2ds0tO51IHxAMw13HPQFQKegLBVWPXV2fTmRI9I";
 let workbookData = {};
 let isMessageSent = true;
 
@@ -158,8 +159,8 @@ async function getTechworksBackwallData() {
     const sheets = google.sheets({ version: 'v4', auth: authClientObject });
 
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: baseSpreadsheetId,
-      range: 'TW-Backwall',
+      spreadsheetId: techworksTabSpreadsheetId,
+      range: 'Main Sheet Backwall',
     });
 
     const data = response.data.values || [];
@@ -599,22 +600,25 @@ async function sendMessage() {
     /////////------------------------------- Get TECHWORKS-BACKWALL National Message ----------------------------/////////
     console.log("Fetching TECHWORKS-BACKWALL data...");
     const { techworksBackwallBaseData, techworksBackwallTableData } = await getTechworksBackwallData();
-    // Process TECHWORKS-BACKWALL data to calculate zone status (matching original logic)
-    if (techworksBackwallTableData.length > 0) {
+    // Process TECHWORKS-BACKWALL data to calculate zone status (matching device IDs)
+    if (techworksBackwallTableData.length > 0 && techworksBackwallBaseData.length > 0) {
       const currentDate = new Date(new Date().getTime() - 12 * 60 * 60 * 1000); // 12 hours buffer
 
       techworksBackwallTableData.forEach(device => {
-        if (!device?.branch) return;
-        if (device?.verified != 'Yes') return;
+        const filterData = techworksBackwallBaseData.find(base =>
+          base['TECKWORKS ID']?.toString().trim().toLowerCase() === device['display_name']?.toString().trim().toLowerCase()
+        );
 
-        const zoneLetter = device.branch.substring(0, 1);
-        if (!techworksBackwallZoneStatus[zoneLetter]) return;
-
-        if (device?.last_accessed) {
-          if (new Date(device.last_accessed) > currentDate) {
-            techworksBackwallZoneStatus[zoneLetter].active++;
-          } else {
-            techworksBackwallZoneStatus[zoneLetter].inactive++;
+        if (filterData && device?.branch) {
+          const zoneLetter = device.branch.substring(0, 1);
+          if (zoneLetter && techworksBackwallZoneStatus[zoneLetter]) {
+            if (device?.last_accessed) {
+              if (new Date(device.last_accessed) > currentDate) {
+                techworksBackwallZoneStatus[zoneLetter].active++;
+              } else {
+                techworksBackwallZoneStatus[zoneLetter].inactive++;
+              }
+            }
           }
         }
       });
@@ -630,25 +634,22 @@ async function sendMessage() {
     /////////------------------------------- Get DIGI-QUAD National Message ----------------------------/////////
     console.log("Fetching DIGI-QUAD data...");
     const { digiQuadBaseData, digiQuadTableData } = await getDigiQuadData();
-    // Process DIGI-QUAD data to calculate zone status
-    if (digiQuadTableData.length > 0 && digiQuadBaseData.length > 0) {
+    // Process DIGI-QUAD data to calculate zone status (using Supabase data directly)
+    if (digiQuadTableData.length > 0) {
       const currentDate = new Date(new Date().getTime() - 12 * 60 * 60 * 1000); // 12 hours buffer
-
+      
       digiQuadTableData.forEach(device => {
-        const filterData = digiQuadBaseData.find(base =>
-          base['Device ID']?.toString().trim().toLowerCase() === device['display_name']?.toString().trim().toLowerCase()
-        );
+        if (!device?.branch) return;
+        if (device?.verified != 'Yes') return;
 
-        if (filterData && device?.branch) {
-          const zoneLetter = device.branch.substring(0, 1);
-          if (zoneLetter && digiQuadZoneStatus[zoneLetter]) {
-            if (device?.last_accessed) {
-              if (new Date(device.last_accessed) > currentDate) {
-                digiQuadZoneStatus[zoneLetter].active++;
-              } else {
-                digiQuadZoneStatus[zoneLetter].inactive++;
-              }
-            }
+        const zoneLetter = device.branch.substring(0, 1);
+        if (!digiQuadZoneStatus[zoneLetter]) return;
+
+        if (device?.last_accessed) {
+          if (new Date(device.last_accessed) > currentDate) {
+            digiQuadZoneStatus[zoneLetter].active++;
+          } else {
+            digiQuadZoneStatus[zoneLetter].inactive++;
           }
         }
       });
