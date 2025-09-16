@@ -424,34 +424,35 @@ async function sendMessage() {
     let AEDevice = {}
     let AllCombinedSystemsPOCNum = {
       "Hitesh": "8700685675",
-      // "Dhruv": "8826909378",
-      // "Sumit": "8920131195",
-      // "Pratek": "9818429501",
-      // "rusum": "9266903108",
+      "Dhruv": "8826909378",
+      "Sumit": "8920131195",
+      "Pratek": "9818429501",
+      "rusum": "9266903108",
+      "Anirban Sen": "9831055203"
     }
     let NationalPOCNum = {
       "Hitesh": "8700685675",
-      // "Dhruv": "8826909378",
-      // "Sumit": "8920131195",
-      // "Pratek": "9818429501",
-      // "rusum": "9266903108",
-      // "Anirban Sen": "9831055203",
-      // "Nitsh Chabbra": "9712933048",
-      // "Nalin Kaushik": "9831055468",
-      // "Gaurav Pundlik": "9831149422",
-      // "Rishab Agarwal": "9734469759",
-      // "Milan Anandan": "9903955267"
-      // "Priyank Maheshwari": "9893585458"
+      "Dhruv": "8826909378",
+      "Sumit": "8920131195",
+      "Pratek": "9818429501",
+      "rusum": "9266903108",
+      "Anirban Sen": "9831055203",
+      "Nitsh Chabbra": "9712933048",
+      "Nalin Kaushik": "9831055468",
+      "Gaurav Pundlik": "9831149422",
+      "Rishab Agarwal": "9734469759",
+      "Milan Anandan": "9903955267",
+      "Priyank Maheshwari": "9893585458"
     }
     let IBC_KOLKATA_POC_NUMBER = {
       "Hitesh": "8700685675",
-      // "Dhruv": "8826909378",
-      // "Sumit": "8920131195",
-      // "Pratek": "9818429501",
-      // "Chirag": "9818875211",
-      // "rusum": "9266903108",
-      // "Mark": "7871419732",
-      // "Rohan": "9888311338",
+      "Dhruv": "8826909378",
+      "Sumit": "8920131195",
+      "Pratek": "9818429501",
+      "Chirag": "9818875211",
+      "rusum": "9266903108",
+      "Mark": "7871419732",
+      "Rohan": "9888311338",
     }
     let DistrictPOCNum = {
       "N": {
