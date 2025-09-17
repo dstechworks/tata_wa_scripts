@@ -430,6 +430,14 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         //     ++twBackwallTotalCount;
                         //     await delay(1000);
                         // }
+
+                        // Send first message only once to Hitesh (per branch)
+                        if (districtCount == 1 && allBranches[key]["District POC Numbers"]["Hitesh"]) {
+                            let districtMsgRes = await districtMsg("district_common", "TECHWORKS-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                            console.log("District --->", districtCount, districtMsgRes, "\n");
+                            ++twBackwallTotalCount;
+                            await delay(500);
+                        }
                     }
                 }
             }

@@ -404,6 +404,14 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         //     ++tabTotalCount;
                         //     await delay(1000);
                         // }
+
+                         // Send first message only once to Hitesh (per branch)
+                         if (districtCount == 1 && allBranches[key]["District POC Numbers"]["Hitesh"]) {
+                            let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                            console.log("District --->", districtCount, districtMsgRes, "\n");
+                            ++tabTotalCount;
+                            await delay(500);
+                        }
                     }
 
                 }
