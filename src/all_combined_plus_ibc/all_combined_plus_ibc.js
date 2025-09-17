@@ -813,6 +813,7 @@ async function sendMessage() {
     // console.log(allBranches);
     console.log("\n");
     let districtCount = 0;
+    let hiteshMessageSent = false;
     for (let key in allBranches) {
       if (allBranches[key]['active']) {
         allBranches[key]["District POC Numbers"] = DistrictPOCNum[`${key[0]}`]
@@ -843,6 +844,15 @@ async function sendMessage() {
             //     ++whatsappMessageTotalCount;
             //     await delay(500);
             // }
+
+            // Send first message only once to Hitesh (per branch)
+            if (pocNum == "Hitesh" && !hiteshMessageSent) {
+                let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
+                console.log("District --->", districtCount, districtMsgRes, "\n");
+                ++whatsappMessageTotalCount;
+                await delay(500);
+                hiteshMessageSent = true;
+            }
           }
 
         }

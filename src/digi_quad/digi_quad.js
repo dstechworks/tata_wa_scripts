@@ -389,6 +389,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         ////////-------------------------------- Send District Message ----------------------------/////////
         // console.log(allBranches);
         let districtCount = 0;
+        let hiteshMessageSent = false;
         for (let key in allBranches) {
             if (allBranches[key]['active']) {
                 allBranches[key]["District POC Numbers"] = DistrictPOCNum[`${key[0]}`]
@@ -421,11 +422,12 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         // }
 
                         // Send first message only once to Hitesh (per branch)
-                        if (districtCount == 1 && allBranches[key]["District POC Numbers"]["Hitesh"]) {
+                        if (pocNum == "Hitesh" && !hiteshMessageSent) {
                             let districtMsgRes = await districtMsg("district_common", "DIGI-QUAD", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
                             console.log("District --->", districtCount, districtMsgRes, "\n");
                             ++digiQuadTotalCount;
                             await delay(500);
+                            hiteshMessageSent = true;
                         }
                     }
                 }
