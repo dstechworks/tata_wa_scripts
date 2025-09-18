@@ -638,7 +638,7 @@ async function sendMessage() {
     // Process DIGI-QUAD data to calculate zone status (using Supabase data directly)
     if (digiQuadTableData.length > 0) {
       const currentDate = new Date(new Date().getTime() - 12 * 60 * 60 * 1000); // 12 hours buffer
-      
+
       digiQuadTableData.forEach(device => {
         if (!device?.branch) return;
         if (device?.verified != 'Yes') return;
@@ -743,7 +743,7 @@ async function sendMessage() {
     for (let allCombinedSystemsPOCName in AllCombinedSystemsPOCNum) {
       let combinedPhoneNumber = `+91${AllCombinedSystemsPOCNum[allCombinedSystemsPOCName]}`;
       if (isMessageSent) {
-        let combinedMsgResult = await allCombinedSystemsNationalMsg("national_poc_single_combined_temp", combinedPhoneNumber, allCombinedData);
+        let combinedMsgResult = await allCombinedSystemsNationalMsg("national_poc_single_combined_temp_1", combinedPhoneNumber, allCombinedData);
         console.log(`All Combined Messages ${allCombinedSystemsPOCName} ---> ${combinedMsgResult}`);
         ++whatsappMessageTotalCount;
         await delay(500);
@@ -767,7 +767,7 @@ async function sendMessage() {
     for (let nationalPOCName in NationalPOCNum) {
       let combinedPhoneNumber = `+91${NationalPOCNum[nationalPOCName]}`;
       if (isMessageSent) {
-        let combinedMsgResult = await combinedSingleSystemsNationalMsg("national_poc_combined_temp", combinedPhoneNumber, combinedSingleData);
+        let combinedMsgResult = await combinedSingleSystemsNationalMsg("national_poc_combined_temp_1", combinedPhoneNumber, combinedSingleData);
         console.log(`Combined Single Messages ${nationalPOCName} ---> ${combinedMsgResult}`);
         ++whatsappMessageTotalCount;
         await delay(500);
@@ -813,7 +813,6 @@ async function sendMessage() {
     // console.log(allBranches);
     console.log("\n");
     let districtCount = 0;
-    let hiteshMessageSent = false;
     for (let key in allBranches) {
       if (allBranches[key]['active']) {
         allBranches[key]["District POC Numbers"] = DistrictPOCNum[`${key[0]}`]
@@ -844,15 +843,6 @@ async function sendMessage() {
             //     ++whatsappMessageTotalCount;
             //     await delay(500);
             // }
-
-            // Send first message only once to Hitesh (per branch)
-            if (pocNum == "Hitesh" && !hiteshMessageSent) {
-                let districtMsgRes = await districtMsg("district_common", "IBC-BACKWALL", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                console.log("District --->", districtCount, districtMsgRes, "\n");
-                ++whatsappMessageTotalCount;
-                await delay(500);
-                hiteshMessageSent = true;
-            }
           }
 
         }

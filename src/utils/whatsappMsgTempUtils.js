@@ -869,7 +869,7 @@ async function allCombinedSystemsNationalMsg(tempName, phoneNum, dataOfNational)
 
 async function combinedSingleSystemsNationalMsg(tempName, phoneNum, dataOfNational) {
     const parameters = [
-        { type: "text", text: "COMBINED" },
+        { type: "text", text: "COMBINED BACKWALL" },
         { type: "text", text: dataOfNational["COMBINED"]?.N.active },
         { type: "text", text: dataOfNational["COMBINED"]?.N.inactive },
         { type: "text", text: dataOfNational["COMBINED"]?.S.active },

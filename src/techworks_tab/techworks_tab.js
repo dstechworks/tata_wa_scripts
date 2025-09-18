@@ -374,7 +374,13 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         ////////-------------------------------- Send District Message ----------------------------/////////
         // console.log(allBranches);
         let districtCount = 0;
-        let hiteshMessageSent = false;
+
+        // Send first message only once to Hitesh
+        let hiteshDistrictMsgRes = await districtMsg("district_common", "TABLET", `+91${DistrictPOCNum["N"]["Hitesh"]}`, "North", "0", "0", "0");
+        console.log("District --->", districtCount, hiteshDistrictMsgRes, "\n");
+        ++tabTotalCount;
+        await delay(500);
+
         for (let key in allBranches) {
             if (allBranches[key]['active']) {
                 allBranches[key]["District POC Numbers"] = DistrictPOCNum[`${key[0]}`]
@@ -406,14 +412,6 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
                         //     await delay(1000);
                         // }
 
-                         // Send first message only once to Hitesh (per branch)
-                         if (pocNum == "Hitesh" && !hiteshMessageSent) {
-                            let districtMsgRes = await districtMsg("district_common", "TABLET", obj.phoneNum, obj.branchName, obj.total, obj.active, obj.inActive);
-                            console.log("District --->", districtCount, districtMsgRes, "\n");
-                            ++tabTotalCount;
-                            await delay(500);
-                            hiteshMessageSent = true;
-                        }
                     }
 
                 }
