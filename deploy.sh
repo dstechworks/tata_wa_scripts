@@ -79,7 +79,7 @@ npm install --production >> "$LOG_FILE" 2>&1 || {
 echo "🔁 Restarting PM2 app: $PM2_APP_NAME" >> "$LOG_FILE"
 
 # Start from config if first time, else restart
-pm2 start ecosystem.config.js --only "$PM2_APP_NAME" || pm2 restart "$PM2_APP_NAME"
+pm2 restart "$PM2_APP_NAME"
 
 # Save process list (for boot recovery)
 pm2 save >> "$LOG_FILE" 2>&1
