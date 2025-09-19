@@ -373,7 +373,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
     let districtCount = 0;
 
     // Send first message only once to Hitesh
-    let hiteshDistrictMsgRes = await districtMsg("district_common", "SQUAD-360", `+91${DistrictPOCNum["N"]["Hitesh"]}`, "North", "0", "0", "0");
+    let hiteshDistrictMsgRes = await districtMsg("district_common", "SQUAD-360", `+918700685675`, "North", "0", "0", "0");
     console.log("District --->", districtCount, hiteshDistrictMsgRes, "\n");
     ++squad360TotalCount;
     await delay(500);
