@@ -205,6 +205,13 @@ async function startScript() {
             // "Milan Anandan": "9903955267"
             // "Priyank Maheshwari": "9893585458"
         }
+        let techworksTeamHeadNum = {
+            "Hitesh": "8700685675",
+            "Dhruv": "8826909378",
+            "Sumit": "8920131195",
+            "Pratek": "9818429501",
+            "rusum": "9266903108",
+        }
         let DistrictPOCNum = {
             "N": {
                 "Amit Sharma": "9878425927",
@@ -389,11 +396,14 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         // console.log(allBranches);
         let districtCount = 0;
 
-        // Send first message only once to Hitesh
-        let hiteshDistrictMsgRes = await districtMsg("district_common", "DIGI-QUAD", `+918700685675`, "North", "0", "0", "0");
-        console.log("District --->", districtCount, hiteshDistrictMsgRes, "\n");
-        ++digiQuadTotalCount;
-        await delay(500);
+        // Send first message only once to techworks team head
+        for (let key in techworksTeamHeadNum) {
+            let techworksTeamHeadDistrictMsgRes = await districtMsg("district_common", "DIGI-QUAD", `+91${techworksTeamHeadNum[key]}`, Object.keys(allBranches)[0], allBranches[Object.keys(allBranches)[0]].total, allBranches[Object.keys(allBranches)[0]].active, allBranches[Object.keys(allBranches)[0]].inactive);
+            console.log("District --->", districtCount, techworksTeamHeadDistrictMsgRes, "\n");
+            ++digiQuadTotalCount;
+            await delay(500);
+        }
+
 
         for (let key in allBranches) {
             if (allBranches[key]['active']) {
