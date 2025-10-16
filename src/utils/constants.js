@@ -39,6 +39,7 @@ let mpduBranchWisePOCNum = {
     },
     "WBHO": {
         "Ashutosh Dwivedi": "9009912365",
+        "Bharat Singh": "6267733463",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
