@@ -31,7 +31,7 @@ cron.schedule('0 10 * * 1-6', () => {
     runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 10 AM
     runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 10 AM
     runScript('Squad 360', '~/tata_wa_scripts/src/squad_360/squad_360.js'); // 10 AM
-    runScript('Magenta Mobility', '~/tata_wa_scripts/src/magenta_mobility/magenta_mobility.js'); // ONLY at 10 AM
+    // runScript('Magenta Mobility', '~/tata_wa_scripts/src/magenta_mobility/magenta_mobility.js'); // ONLY at 10 AM
 }, { timezone: TIMEZONE });
 
 // Mon–Sat @ 5:00 PM: Run all except Magenta Mobility
