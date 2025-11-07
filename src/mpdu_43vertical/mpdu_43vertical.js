@@ -324,11 +324,14 @@ async function sendMpduEveningMessage(apiData) {
                 await delay(500);
             }
 
-            // Send additional message only to "Shreyas K" for SBLR
-            if (branch === "SBLR") {
-                let res = await mpduBranchMsg("mpdu_for_branch", `+91${mpduBranchWisePOCNum[branch]["Shreyas K"]}`, branch, dataStoreArray[0][branch], inActiveOutletListStr);
-                console.log(`MPDU ${branch}: Shreyas K ---> ${res}`);
-                await delay(500);
+            // Send branch wise message to the POC {SCHE,WPUN}  
+            if (branch === "SCHE" || branch === "WPUN") {
+                for (const pocName in mpduBranchWisePOCNum[branch]) {
+                    let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+                    let res = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                    console.log(`MPDU ${branch}: ${pocName} ---> ${res}`);
+                    await delay(500);
+                }
             }
         }
     } else {
@@ -455,11 +458,14 @@ async function send43InchEveningMessage(apiData) {
             await delay(500);
         }
 
-        // Send additional message only to "Shreyas K" for SBLR
-        if (branch === "SBLR") {
-            let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", `+91${mpduBranchWisePOCNum[branch]["Shreyas K"]}`, branch, dataStoreArray[0][branch], inActiveOutletListStr);
-            console.log(`43 Inch ${branch}: Shreyas K ---> ${msgRes}`);
-            await delay(500);
+        // Send branch wise message to the POC {WPUN}  
+        if (branch === "WPUN") {
+            for (const pocName in mpduBranchWisePOCNum[branch]) {
+                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+                let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                console.log(`43 Inch ${branch}: ${pocName} ---> ${msgRes}`);
+                await delay(500);
+            }
         }
     }
 }
