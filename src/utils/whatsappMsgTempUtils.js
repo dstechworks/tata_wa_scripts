@@ -645,7 +645,7 @@ async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
     return await requestAxios(config);
 }
 
-async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
+async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr, tempClosedOutletListStr) {
     let variables = JSON.stringify({
         "to": phoneNum,
         "type": "template",
@@ -659,7 +659,8 @@ async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inAct
                         { "type": "text", "text": branchCode },
                         { "type": "text", "text": branchCounts.active },
                         { "type": "text", "text": branchCounts.inactive },
-                        { "type": "text", "text": inActiveOutletListStr }
+                        { "type": "text", "text": inActiveOutletListStr },
+                        { "type": "text", "text": tempClosedOutletListStr }
                     ],
                 },
             ],
@@ -719,7 +720,7 @@ async function vertical43InchNationalMsg(tempName, phoneNum, dataOfNational) {
     return await requestAxios(config);
 }
 
-async function vertical43InchBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr) {
+async function vertical43InchBranchMsg(tempName, phoneNum, branchCode, branchCounts, inActiveOutletListStr, tempClosedOutletListStr) {
     let variables = JSON.stringify({
         "to": phoneNum,
         "type": "template",
@@ -733,7 +734,9 @@ async function vertical43InchBranchMsg(tempName, phoneNum, branchCode, branchCou
                         { "type": "text", "text": branchCode },
                         { "type": "text", "text": branchCounts.active },
                         { "type": "text", "text": branchCounts.inactive },
-                        { "type": "text", "text": inActiveOutletListStr }],
+                        { "type": "text", "text": inActiveOutletListStr },
+                        { "type": "text", "text": tempClosedOutletListStr }
+                    ],
                 }
             ],
         }
