@@ -208,7 +208,7 @@ async function sendMpduMorningMessage(dbData) {
         let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
         const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
         uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
+            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
         });
 
         if (uniqueBranchCodes.length == 21) {
@@ -219,13 +219,21 @@ async function sendMpduMorningMessage(dbData) {
                 if (findDeviceByTechworksId) {
                     const onlineDevice = dbData.find(d => d.display_name.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && Number(d.display_count) > 0);
                     const outletName = deviceIdElement['Outlet Name'].trim();
+                    const remarks = deviceIdElement['Remarks'].trim();
 
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active += 1;
                         dataStoreArray[0].national.active += 1;
                     } else {
                         dataStoreArray[0][branchCode].inactive += 1;
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                        // first if device inactive 
+                        // when remarks not found then add to inActiveOutletList
+                        // if remarks found then add to tempClosedOutletList
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                        } else {
+                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
+                        }
                         dataStoreArray[0].national.inactive += 1;
                     }
                     dataStoreArray[0][branchCode].total += 1;
@@ -250,7 +258,8 @@ async function sendMpduMorningMessage(dbData) {
                     for (const pocName in mpduBranchWisePOCNum[branch]) {
                         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
                         let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let branchMsgRes = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, branchCounts, inActiveOutletListStr);
+                        let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                        let branchMsgRes = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
                         console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
                         await delay(500);
                     }
@@ -278,7 +287,7 @@ async function sendMpduEveningMessage(apiData) {
         // Initialize branch data
         targetBranches.forEach(branch => {
             if (uniqueBranchCodes.includes(branch)) {
-                dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "" };
+                dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
             }
         });
 
@@ -292,14 +301,18 @@ async function sendMpduEveningMessage(apiData) {
                         d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1
                     );
                     const outletName = deviceIdElement['Outlet Name'].trim();
+                    const remarks = deviceIdElement['Remarks'].trim();
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active++;
                     } else {
                         dataStoreArray[0][branchCode].inactive++;
-                        dataStoreArray[0][branchCode].inActiveOutletList +=
-                            dataStoreArray[0][branchCode].inActiveOutletList
-                                ? `, ${outletName}`
-                                : outletName;
+                        // when remarks not found then add to inActiveOutletList
+                        // if remarks found then add to tempClosedOutletList
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                        } else {
+                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
+                        }
                     }
                 }
             }
@@ -314,14 +327,12 @@ async function sendMpduEveningMessage(apiData) {
 
             console.log("\n");
             console.log(`Sending MPDU ${branch} Branch Messages...`);
-            let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList)
-                ? "No inactive outlet list found"
-                : dataStoreArray[0][branch].inActiveOutletList;
-
+            let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0][branch].inActiveOutletList;
+            let tempClosedOutletListStr = isEmpty(dataStoreArray[0][branch].tempClosedOutletList) ? "No temporarily closed outlet list found" : dataStoreArray[0][branch].tempClosedOutletList;
 
             for (let key in eveningBranchNum) {
                 let phoneNum = `+91${eveningBranchNum[key]}`;
-                let res = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
                 console.log(`MPDU ${branch}: ${key} ---> ${res}`);
                 await delay(500);
             }
@@ -330,7 +341,7 @@ async function sendMpduEveningMessage(apiData) {
             if (branch === "SCHE" || branch === "WPUN") {
                 for (const pocName in mpduBranchWisePOCNum[branch]) {
                     let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                    let res = await mpduBranchMsg("mpdu_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                    let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
                     console.log(`MPDU ${branch}: ${pocName} ---> ${res}`);
                     await delay(500);
                 }
@@ -350,13 +361,14 @@ async function send43InchMorningMessage(dbData) {
         let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
         const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
         uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
+            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
         });
 
         if (uniqueBranchCodes.length == 9) {
             workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
                 const findDeviceByTechworksId = dbData.find(d => d.display_name == deviceIdElement['Techworks ID']);
                 const branchCode = deviceIdElement['Branch Code'];
+                const remarks = deviceIdElement['Remarks'].trim();
 
                 if (findDeviceByTechworksId) {
                     const onlineDevice = dbData.find(d => d.display_name == deviceIdElement['Techworks ID'] && d.display_count > 0);
@@ -366,7 +378,13 @@ async function send43InchMorningMessage(dbData) {
                         dataStoreArray[0].national.active += 1;
                     } else {
                         dataStoreArray[0][branchCode].inactive += 1;
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                        // when remarks not found then add to inActiveOutletList
+                        // if remarks found then add to tempClosedOutletList
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                        } else {
+                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
+                        }
                         dataStoreArray[0].national.inactive += 1;
                     }
                     dataStoreArray[0][branchCode].total += 1;
@@ -391,7 +409,8 @@ async function send43InchMorningMessage(dbData) {
                     for (const pocName in mpduBranchWisePOCNum[branch]) {
                         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
                         let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let branchMsgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, branchCounts, inActiveOutletListStr);
+                        let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                        let branchMsgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
                         console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
                         await delay(500);
                     }
@@ -418,7 +437,7 @@ async function send43InchEveningMessage(apiData) {
 
     // Initialize data for each target branch
     targetBranches.forEach(branch => {
-        dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "" };
+        dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
     });
 
     // Count active/inactive for each branch
@@ -431,13 +450,18 @@ async function send43InchEveningMessage(apiData) {
                     d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device['Techworks ID'] && d.loggedIn == 1
                 );
                 const outletName = device['Outlet Name'].trim();
+                const remarks = device['Remarks'].trim();
                 if (onlineDevice) {
                     dataStoreArray[0][branchCode].active += 1;
                 } else {
                     dataStoreArray[0][branchCode].inactive += 1;
-                    dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
-                        ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
-                        : outletName;
+                    // when remarks not found then add to inActiveOutletList
+                    // if remarks found then add to tempClosedOutletList
+                    if (isEmpty(remarks)) {
+                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
+                    } else {
+                        dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
+                    }
                 }
             }
         }
@@ -448,14 +472,13 @@ async function send43InchEveningMessage(apiData) {
         console.log("\n");
         console.log(`Sending 43 Inch ${branch} Branch Messages...`);
 
-        let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList)
-            ? "No inactive outlet list found"
-            : dataStoreArray[0][branch].inActiveOutletList;
+        let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0][branch].inActiveOutletList;
+        let tempClosedOutletListStr = isEmpty(dataStoreArray[0][branch].tempClosedOutletList) ? "No temporarily closed outlet list found" : dataStoreArray[0][branch].tempClosedOutletList;
 
         for (let key in eveningBranchNum) {
             let phoneNum = `+91${eveningBranchNum[key]}`;
 
-            let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+            let msgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
             console.log(`43 Inch ${branch}: ${key} ---> ${msgRes}`);
             await delay(500);
         }
@@ -464,7 +487,7 @@ async function send43InchEveningMessage(apiData) {
         if (branch === "WPUN") {
             for (const pocName in mpduBranchWisePOCNum[branch]) {
                 let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                let msgRes = await vertical43InchBranchMsg("43vertical_for_branch", phoneNum, branch, dataStoreArray[0][branch], inActiveOutletListStr);
+                let msgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
                 console.log(`43 Inch ${branch}: ${pocName} ---> ${msgRes}`);
                 await delay(500);
             }
