@@ -225,7 +225,9 @@ async function sendMpduMorningMessage(dbData) {
                         dataStoreArray[0][branchCode].active += 1;
                         dataStoreArray[0].national.active += 1;
                     } else {
-                        dataStoreArray[0][branchCode].inactive += 1;
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inactive += 1;
+                        }
                         // first if device inactive 
                         // when remarks not found then add to inActiveOutletList
                         // if remarks found then add to tempClosedOutletList
@@ -305,7 +307,9 @@ async function sendMpduEveningMessage(apiData) {
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active++;
                     } else {
-                        dataStoreArray[0][branchCode].inactive++;
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inactive++;
+                        }
                         // when remarks not found then add to inActiveOutletList
                         // if remarks found then add to tempClosedOutletList
                         if (isEmpty(remarks)) {
@@ -377,7 +381,9 @@ async function send43InchMorningMessage(dbData) {
                         dataStoreArray[0][branchCode].active += 1;
                         dataStoreArray[0].national.active += 1;
                     } else {
-                        dataStoreArray[0][branchCode].inactive += 1;
+                        if (isEmpty(remarks)) {
+                            dataStoreArray[0][branchCode].inactive += 1;
+                        }
                         // when remarks not found then add to inActiveOutletList
                         // if remarks found then add to tempClosedOutletList
                         if (isEmpty(remarks)) {
@@ -454,7 +460,9 @@ async function send43InchEveningMessage(apiData) {
                 if (onlineDevice) {
                     dataStoreArray[0][branchCode].active += 1;
                 } else {
-                    dataStoreArray[0][branchCode].inactive += 1;
+                    if (isEmpty(remarks)) {
+                        dataStoreArray[0][branchCode].inactive += 1;
+                    }
                     // when remarks not found then add to inActiveOutletList
                     // if remarks found then add to tempClosedOutletList
                     if (isEmpty(remarks)) {
