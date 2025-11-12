@@ -167,7 +167,7 @@ async function getBaseDataFromGoogleSheets() {
     const getWorkbookWiseData = async (sheets, sheetDetails) => {
         try {
             for (const detail of sheetDetails) {
-                const { sheetName, filterStatus } = detail;
+                const { sheetName, filterStatus, filterStatus2 } = detail;
                 const response = await sheets.spreadsheets.values.get({
                     spreadsheetId: spreadsheetId,
                     range: sheetName,
@@ -176,7 +176,12 @@ async function getBaseDataFromGoogleSheets() {
                 const data = response.data.values || [];
                 const [headers, ...rows] = data;
                 let result = rows.map(row => Object.fromEntries(headers.map((key, index) => [key, row[index]])));
-                result = result.filter(i => i['Current Status'] == filterStatus && i['Branch Code']);
+                result = result.filter(i => {
+                    const statusMatch = filterStatus2
+                        ? (i['Current Status'] == filterStatus || i['Current Status'] == filterStatus2)
+                        : (i['Current Status'] == filterStatus);
+                    return statusMatch && i['Branch Code'];
+                });
                 workbookData[sheetName] = result;
             }
         } catch (error) {
@@ -189,8 +194,8 @@ async function getBaseDataFromGoogleSheets() {
     try {
         const sheets = await accessGoogleSheet();
         return await getWorkbookWiseData(sheets, [
-            { sheetName: 'All Device', filterStatus: 'Verified & Currently Installed' },
-            { sheetName: '43 Inch Vertical', filterStatus: 'Verified & Working' }
+            { sheetName: 'All Device', filterStatus: 'Verified & Currently Installed', filterStatus2: 'Verified & Temp Closed' },
+            { sheetName: '43 Inch Vertical', filterStatus: 'Verified & Working', filterStatus2: 'Verified & Temp Closed' }
         ]);
     } catch (error) {
         console.error("Error during Google Sheets data retrieval:", error);
@@ -219,27 +224,30 @@ async function sendMpduMorningMessage(dbData) {
                 if (findDeviceByTechworksId) {
                     const onlineDevice = dbData.find(d => d.display_name.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && Number(d.display_count) > 0);
                     const outletName = deviceIdElement['Outlet Name'].trim();
-                    const remarks = deviceIdElement['Remarks'].trim();
 
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active += 1;
                         dataStoreArray[0].national.active += 1;
                     } else {
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inactive += 1;
-                        }
-                        // first if device inactive 
-                        // when remarks not found then add to inActiveOutletList
-                        // if remarks found then add to tempClosedOutletList
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                        } else {
-                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
-                        }
+                        dataStoreArray[0][branchCode].inactive += 1;
+                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
                         dataStoreArray[0].national.inactive += 1;
                     }
                     dataStoreArray[0][branchCode].total += 1;
                     dataStoreArray[0].national.total += 1;
+                }
+            });
+
+            // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+            workbookData['All Device'].forEach(deviceIdElement => {
+                const branchCode = deviceIdElement['Branch Code'];
+                const currentStatus = deviceIdElement['Current Status'];
+                const outletName = deviceIdElement['Outlet Name']?.trim();
+
+                if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
+                    dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                        ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
+                        : outletName;
                 }
             });
 
@@ -303,22 +311,27 @@ async function sendMpduEveningMessage(apiData) {
                         d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1
                     );
                     const outletName = deviceIdElement['Outlet Name'].trim();
-                    const remarks = deviceIdElement['Remarks'].trim();
+
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active++;
                     } else {
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inactive++;
-                        }
-                        // when remarks not found then add to inActiveOutletList
-                        // if remarks found then add to tempClosedOutletList
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                        } else {
-                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
-                        }
+                        dataStoreArray[0][branchCode].inactive++;
+                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
                     }
                 }
+            }
+        });
+
+        // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+        workbookData['All Device'].forEach(deviceIdElement => {
+            const branchCode = deviceIdElement['Branch Code'];
+            const currentStatus = deviceIdElement['Current Status'];
+            const outletName = deviceIdElement['Outlet Name']?.trim();
+
+            if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
+                dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                    ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
+                    : outletName;
             }
         });
 
@@ -372,29 +385,34 @@ async function send43InchMorningMessage(dbData) {
             workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
                 const findDeviceByTechworksId = dbData.find(d => d.display_name == deviceIdElement['Techworks ID']);
                 const branchCode = deviceIdElement['Branch Code'];
-                const remarks = deviceIdElement['Remarks'].trim();
 
                 if (findDeviceByTechworksId) {
                     const onlineDevice = dbData.find(d => d.display_name == deviceIdElement['Techworks ID'] && d.display_count > 0);
                     const outletName = deviceIdElement['Outlet Name'].trim();
+
                     if (onlineDevice) {
                         dataStoreArray[0][branchCode].active += 1;
                         dataStoreArray[0].national.active += 1;
                     } else {
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inactive += 1;
-                        }
-                        // when remarks not found then add to inActiveOutletList
-                        // if remarks found then add to tempClosedOutletList
-                        if (isEmpty(remarks)) {
-                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                        } else {
-                            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
-                        }
+                        dataStoreArray[0][branchCode].inactive += 1;
+                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
                         dataStoreArray[0].national.inactive += 1;
                     }
                     dataStoreArray[0][branchCode].total += 1;
                     dataStoreArray[0].national.total += 1;
+                }
+            });
+
+            // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+            workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
+                const branchCode = deviceIdElement['Branch Code'];
+                const currentStatus = deviceIdElement['Current Status'];
+                const outletName = deviceIdElement['Outlet Name']?.trim();
+
+                if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
+                    dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                        ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
+                        : outletName;
                 }
             });
 
@@ -456,22 +474,27 @@ async function send43InchEveningMessage(apiData) {
                     d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device['Techworks ID'] && d.loggedIn == 1
                 );
                 const outletName = device['Outlet Name'].trim();
-                const remarks = device['Remarks'].trim();
+
                 if (onlineDevice) {
                     dataStoreArray[0][branchCode].active += 1;
                 } else {
-                    if (isEmpty(remarks)) {
-                        dataStoreArray[0][branchCode].inactive += 1;
-                    }
-                    // when remarks not found then add to inActiveOutletList
-                    // if remarks found then add to tempClosedOutletList
-                    if (isEmpty(remarks)) {
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                    } else {
-                        dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
-                    }
+                    dataStoreArray[0][branchCode].inactive += 1;
+                    dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
                 }
             }
+        }
+    });
+
+    // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+    workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
+        const branchCode = deviceIdElement['Branch Code'];
+        const currentStatus = deviceIdElement['Current Status'];
+        const outletName = deviceIdElement['Outlet Name']?.trim();
+
+        if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
+                : outletName;
         }
     });
 
