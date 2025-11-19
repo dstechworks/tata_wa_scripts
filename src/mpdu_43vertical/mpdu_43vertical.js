@@ -203,17 +203,116 @@ async function getBaseDataFromGoogleSheets() {
     }
 }
 
+// Function to get SQUAD-360 data
+async function getSquad360Data() {
+    try {
+        // Get access token
+        const data = JSON.stringify({
+            "email": "tw@squad360.in",
+            "password": "CMWjDJfabG"
+        });
+
+        const config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'https://monitor-api.squad360.in/api/v1/auth/login',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        const response = await axios.request(config);
+        const token = response.data.accessToken;
+
+        // Get all screens
+        const screensConfig = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: 'https://monitor-api.squad360.in/api/v1/screens',
+            headers: {
+                'authorization': `Bearer ${token}`
+            }
+        };
+
+        const screensResponse = await axios.request(screensConfig);
+        const allScreensData = screensResponse.data;
+
+        // Get all screens status
+        const statusConfig = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: 'https://monitor-api.squad360.in/api/v1/screens/offline-by-branch',
+            headers: {
+                'authorization': `Bearer ${token}`
+            }
+        };
+
+        const statusResponse = await axios.request(statusConfig);
+        const allScreensStatus = statusResponse?.data?.data?.branchStats?.flatMap(branch => branch.screens || []);
+
+        // Filter screens with displayStatus="Active" and screenType="backwall"
+        const filteredScreens = allScreensData.filter(screen =>
+            screen.displayStatus == "Active" &&
+            screen.screenType == "mpdu"
+        );
+
+        // Create a map of screenId to status for quick lookup
+        const statusMap = {};
+        if (Array.isArray(allScreensStatus)) {
+            allScreensStatus.forEach(statusItem => {
+                if (statusItem && statusItem.screenId) {
+                    statusMap[statusItem.screenId] = statusItem.status == 'online' ? 'Active' : 'InActive';
+                }
+            });
+        }
+
+        const formattedScreens = filteredScreens.map(screen => {
+            return {
+                screenId: screen.screenId,
+                displayStatus: screen.displayStatus,
+                isActive: statusMap[screen.screenId] || 'InActive',
+                branch: screen.outlet?.branch || '',
+                dhanushId: screen.outlet?.dhanushId || '',
+                wdCode: screen.outlet?.wdCode || '',
+                wdName: screen.outlet?.wdName || '',
+                name: screen.outlet?.name || '',
+                address: screen.outlet?.address || '',
+                pinCode: screen.outlet?.pinCode || '',
+                city: screen.outlet?.city || '',
+                state: screen.outlet?.state || '',
+                status: screen.outlet?.status || '',
+                channel: screen.outlet?.channel || '',
+                ownerName: screen.outlet?.ownerName || '',
+                ownerContactNumber: screen.outlet?.ownerContactNumber || '',
+                teamLeadName: screen.outlet?.teamLeadName || '',
+                teamLeadContactNumber: screen.outlet?.teamLeadContactNumber || '',
+                areaExecutiveName: screen.outlet?.areaExecutiveName || '',
+                areaExecutiveContactNumber: screen.outlet?.areaExecutiveContactNumber || '',
+                areaManagerName: screen.outlet?.areaManagerName || '',
+                areaManagerContactNumber: screen.outlet?.areaManagerContactNumber || '',
+                areaManagerMailId: screen.outlet?.areaManagerMailId || ''
+            };
+        });
+
+        return formattedScreens;
+    } catch (error) {
+        console.error("Error fetching SQUAD-360 data:", error);
+        return [];
+    }
+}
+
 
 // =================================================================================================
 // --- MPDU SCRIPT ---
 // =================================================================================================
-async function sendMpduMorningMessage(dbData) {
+async function sendMpduMorningMessage(dbData, squad360Data = []) {
     console.log("\n--- Starting MPDU Morning Report ---");
     if (workbookData['All Device'] && workbookData['All Device'].length > 0 && dbData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
+        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
         const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
         uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
         });
 
         if (uniqueBranchCodes.length == 21) {
@@ -238,18 +337,37 @@ async function sendMpduMorningMessage(dbData) {
                 }
             });
 
-            // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+            // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
             workbookData['All Device'].forEach(deviceIdElement => {
                 const branchCode = deviceIdElement['Branch Code'];
                 const currentStatus = deviceIdElement['Current Status'];
                 const outletName = deviceIdElement['Outlet Name']?.trim();
 
                 if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
+                    dataStoreArray[0][branchCode].tempClosed += 1;
+                    dataStoreArray[0].national.tempClosed += 1;
                     dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
                         ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
                         : outletName;
                 }
             });
+
+            // Add Squad360 data to national counts (reusing fetched data)
+            let squad360Active = 0;
+            let squad360Inactive = 0;
+            if (squad360Data.length > 0) {
+                squad360Data.forEach(screen => {
+                    if (screen.isActive === 'Active') {
+                        dataStoreArray[0].national.active += 1;
+                        squad360Active += 1;
+                    } else {
+                        dataStoreArray[0].national.inactive += 1;
+                        squad360Inactive += 1;
+                    }
+                    dataStoreArray[0].national.total += 1;
+                });
+            }
+
 
             console.log("Sending MPDU National Messages...");
             for (let key in NationalPOCNum) {
@@ -283,21 +401,21 @@ async function sendMpduMorningMessage(dbData) {
     }
 }
 
-async function sendMpduEveningMessage(apiData) {
+async function sendMpduEveningMessage(apiData, squad360Data = []) {
     console.log("\n--- Starting MPDU Evening Report ---");
 
     const targetBranches = ["SBLR", "WPUN", "SCHE", "NDEL"]; // ✅ dynamic
 
     if (workbookData['All Device']?.length > 0 && apiData.length > 0) {
 
-        let dataStoreArray = [{ national: { active: 0, inactive: 0, total: 0 } }];
+        let dataStoreArray = [{ national: { active: 0, inactive: 0, tempClosed: 0, total: 0 } }];
 
         const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
 
         // Initialize branch data
         targetBranches.forEach(branch => {
             if (uniqueBranchCodes.includes(branch)) {
-                dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
+                dataStoreArray[0][branch] = { active: 0, inactive: 0, tempClosed: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
             }
         });
 
@@ -322,18 +440,37 @@ async function sendMpduEveningMessage(apiData) {
             }
         });
 
-        // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+        // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
         workbookData['All Device'].forEach(deviceIdElement => {
             const branchCode = deviceIdElement['Branch Code'];
             const currentStatus = deviceIdElement['Current Status'];
             const outletName = deviceIdElement['Outlet Name']?.trim();
 
             if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
+                dataStoreArray[0][branchCode].tempClosed += 1;
+                dataStoreArray[0].national.tempClosed += 1;
                 dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
                     ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
                     : outletName;
             }
         });
+
+        // Add Squad360 data to national counts (reusing fetched data)
+        let squad360Active = 0;
+        let squad360Inactive = 0;
+        if (squad360Data.length > 0) {
+            squad360Data.forEach(screen => {
+                if (screen.isActive === 'Active') {
+                    dataStoreArray[0].national.active += 1;
+                    squad360Active += 1;
+                } else {
+                    dataStoreArray[0].national.inactive += 1;
+                    squad360Inactive += 1;
+                }
+                dataStoreArray[0].national.total += 1;
+            });
+            console.log(`SQUAD-360: Added ${squad360Data.length} devices (${squad360Active} Active / ${squad360Inactive} Inactive) to national counts`);
+        }
 
         // Loop for each branch
         for (const branch of targetBranches) {
@@ -375,10 +512,10 @@ async function sendMpduEveningMessage(apiData) {
 async function send43InchMorningMessage(dbData) {
     console.log("\n--- Starting 43 Inch Vertical Morning Report ---");
     if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && dbData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
+        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
         const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
         uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
         });
 
         if (uniqueBranchCodes.length == 9) {
@@ -403,13 +540,15 @@ async function send43InchMorningMessage(dbData) {
                 }
             });
 
-            // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+            // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
             workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
                 const branchCode = deviceIdElement['Branch Code'];
                 const currentStatus = deviceIdElement['Current Status'];
                 const outletName = deviceIdElement['Outlet Name']?.trim();
 
                 if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
+                    dataStoreArray[0][branchCode].tempClosed += 1;
+                    dataStoreArray[0].national.tempClosed += 1;
                     dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
                         ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
                         : outletName;
@@ -457,11 +596,11 @@ async function send43InchEveningMessage(apiData) {
     }
 
     const targetBranches = ["SBLR", "WPUN", "NDEL"];
-    let dataStoreArray = [{ "national": { active: 0, inactive: 0, total: 0 } }];
+    let dataStoreArray = [{ "national": { active: 0, inactive: 0, tempClosed: 0, total: 0 } }];
 
     // Initialize data for each target branch
     targetBranches.forEach(branch => {
-        dataStoreArray[0][branch] = { active: 0, inactive: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
+        dataStoreArray[0][branch] = { active: 0, inactive: 0, tempClosed: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
     });
 
     // Count active/inactive for each branch
@@ -485,13 +624,15 @@ async function send43InchEveningMessage(apiData) {
         }
     });
 
-    // Populate tempClosedOutletList from Google Sheets data where Current Status = "Verified & Temp Closed"
+    // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
     workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
         const branchCode = deviceIdElement['Branch Code'];
         const currentStatus = deviceIdElement['Current Status'];
         const outletName = deviceIdElement['Outlet Name']?.trim();
 
         if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode].tempClosed += 1;
+            dataStoreArray[0].national.tempClosed += 1;
             dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
                 ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
                 : outletName;
@@ -542,6 +683,11 @@ async function startScript() {
     }
     console.log("MPDU BASE DATA SHEET ::", workbookData['All Device'] ? workbookData['All Device'].length : 0);
     console.log("43-VERTICAL BASE DATA SHEET ::", workbookData['43 Inch Vertical'] ? workbookData['43 Inch Vertical'].length : 0);
+
+    // Fetch Squad360 data once and reuse it
+    console.log("Fetching SQUAD-360 data...");
+    const squad360Data = await getSquad360Data();
+    console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
 
     const currentHour = currentTime.hour();
     if (currentHour >= 15) {
@@ -610,7 +756,7 @@ async function startScript() {
             }
 
             await delay(8000);
-            await sendMpduEveningMessage(apiData);
+            await sendMpduEveningMessage(apiData, squad360Data);
             await send43InchEveningMessage(apiData);
 
         } catch (error) {
@@ -624,12 +770,12 @@ async function startScript() {
             console.log("Data From display_data_table ::", dbResponse.rows.length);
 
             // Build and print MPDU message body summary
-            let mpduDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
+            let mpduDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
             let mpduAllZero = false;
             if (workbookData['All Device'] && workbookData['All Device'].length > 0 && dbResponse.rows.length > 0) {
                 const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
                 uniqueBranchCodes.forEach(branch => {
-                    mpduDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
+                    mpduDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
                 });
                 workbookData['All Device'].forEach(deviceIdElement => {
                     const findDeviceByTechworksId = dbResponse.rows.find(d => d.display_name == deviceIdElement['Techworks ID']);
@@ -647,45 +793,70 @@ async function startScript() {
                         mpduDataStoreArray[0].national.total += 1;
                     }
                 });
-                let mpduMessageBodyNational = `
-NATIONAL MPDU STATUS
-NATIONAL WISE
-Total : ${mpduDataStoreArray[0].national.active} (Active) / ${mpduDataStoreArray[0].national.inactive} (Inactive)
 
-BRANCH WISE
-WBHO : ${mpduDataStoreArray[0].WBHO?.active || 0} (Active) / ${mpduDataStoreArray[0].WBHO?.inactive || 0} (Inactive)
-WNAG : ${mpduDataStoreArray[0].WNAG?.active || 0} (Active) / ${mpduDataStoreArray[0].WNAG?.inactive || 0} (Inactive)
-WAHM : ${mpduDataStoreArray[0].WAHM?.active || 0} (Active) / ${mpduDataStoreArray[0].WAHM?.inactive || 0} (Inactive)
-EVIZ : ${mpduDataStoreArray[0].EVIZ?.active || 0} (Active) / ${mpduDataStoreArray[0].EVIZ?.inactive || 0} (Inactive)
-SHYD : ${mpduDataStoreArray[0].SHYD?.active || 0} (Active) / ${mpduDataStoreArray[0].SHYD?.inactive || 0} (Inactive)
-SBLR : ${mpduDataStoreArray[0].SBLR?.active || 0} (Active) / ${mpduDataStoreArray[0].SBLR?.inactive || 0} (Inactive)
-SCHE : ${mpduDataStoreArray[0].SCHE?.active || 0} (Active) / ${mpduDataStoreArray[0].SCHE?.inactive || 0} (Inactive)
-NJPR : ${mpduDataStoreArray[0].NJPR?.active || 0} (Active) / ${mpduDataStoreArray[0].NJPR?.inactive || 0} (Inactive)
-WMUM : ${mpduDataStoreArray[0].WMUM?.active || 0} (Active) / ${mpduDataStoreArray[0].WMUM?.inactive || 0} (Inactive)
-WPUN : ${mpduDataStoreArray[0].WPUN?.active || 0} (Active) / ${mpduDataStoreArray[0].WPUN?.inactive || 0} (Inactive)
-NLUC : ${mpduDataStoreArray[0].NLUC?.active || 0} (Active) / ${mpduDataStoreArray[0].NLUC?.inactive || 0} (Inactive)
-NEUP : ${mpduDataStoreArray[0].NEUP?.active || 0} (Active) / ${mpduDataStoreArray[0].NEUP?.inactive || 0} (Inactive)
-EORI : ${mpduDataStoreArray[0].EORI?.active || 0} (Active) / ${mpduDataStoreArray[0].EORI?.inactive || 0} (Inactive)
-ECAL : ${mpduDataStoreArray[0].ECAL?.active || 0} (Active) / ${mpduDataStoreArray[0].ECAL?.inactive || 0} (Inactive)
-EGAU : ${mpduDataStoreArray[0].EGAU?.active || 0} (Active) / ${mpduDataStoreArray[0].EGAU?.inactive || 0} (Inactive)
-NSAH : ${mpduDataStoreArray[0].NSAH?.active || 0} (Active) / ${mpduDataStoreArray[0].NSAH?.inactive || 0} (Inactive)
-NCHA : ${mpduDataStoreArray[0].NCHA?.active || 0} (Active) / ${mpduDataStoreArray[0].NCHA?.inactive || 0} (Inactive)
-NDEL : ${mpduDataStoreArray[0].NDEL?.active || 0} (Active) / ${mpduDataStoreArray[0].NDEL?.inactive || 0} (Inactive)
-SKAR : ${mpduDataStoreArray[0].SKAR?.active || 0} (Active) / ${mpduDataStoreArray[0].SKAR?.inactive || 0} (Inactive)
-SCOI : ${mpduDataStoreArray[0].SCOI?.active || 0} (Active) / ${mpduDataStoreArray[0].SCOI?.inactive || 0} (Inactive)
-SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArray[0].SERN?.inactive || 0} (Inactive)
+                // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
+                workbookData['All Device'].forEach(deviceIdElement => {
+                    const branchCode = deviceIdElement['Branch Code'];
+                    const currentStatus = deviceIdElement['Current Status'];
+                    if (currentStatus === 'Verified & Temp Closed' && mpduDataStoreArray[0][branchCode]) {
+                        mpduDataStoreArray[0][branchCode].tempClosed += 1;
+                        mpduDataStoreArray[0].national.tempClosed += 1;
+                    }
+                });
+
+                // Add Squad360 data to preview (reusing fetched data)
+                let squad360PreviewActive = 0;
+                let squad360PreviewInactive = 0;
+                if (squad360Data.length > 0) {
+                    squad360Data.forEach(screen => {
+                        if (screen.isActive === 'Active') {
+                            mpduDataStoreArray[0].national.active += 1;
+                            squad360PreviewActive += 1;
+                        } else {
+                            mpduDataStoreArray[0].national.inactive += 1;
+                            squad360PreviewInactive += 1;
+                        }
+                        mpduDataStoreArray[0].national.total += 1;
+                    });
+                }
+
+                let mpduMessageBodyNational = `
+NATIONAL MPDU STATUS:
+
+Total : ${mpduDataStoreArray[0].national.active} (Active) / ${mpduDataStoreArray[0].national.inactive} (InActive) / ${mpduDataStoreArray[0].national.tempClosed} (TempClosed)
+WBHO : ${mpduDataStoreArray[0].WBHO?.active || 0} (Active) / ${mpduDataStoreArray[0].WBHO?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WBHO?.tempClosed || 0} (TempClosed)
+WNAG : ${mpduDataStoreArray[0].WNAG?.active || 0} (Active) / ${mpduDataStoreArray[0].WNAG?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WNAG?.tempClosed || 0} (TempClosed)
+WAHM : ${mpduDataStoreArray[0].WAHM?.active || 0} (Active) / ${mpduDataStoreArray[0].WAHM?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WAHM?.tempClosed || 0} (TempClosed)
+EVIZ : ${mpduDataStoreArray[0].EVIZ?.active || 0} (Active) / ${mpduDataStoreArray[0].EVIZ?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EVIZ?.tempClosed || 0} (TempClosed)
+SHYD : ${mpduDataStoreArray[0].SHYD?.active || 0} (Active) / ${mpduDataStoreArray[0].SHYD?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SHYD?.tempClosed || 0} (TempClosed)
+SBLR : ${mpduDataStoreArray[0].SBLR?.active || 0} (Active) / ${mpduDataStoreArray[0].SBLR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SBLR?.tempClosed || 0} (TempClosed)
+SCHE : ${mpduDataStoreArray[0].SCHE?.active || 0} (Active) / ${mpduDataStoreArray[0].SCHE?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SCHE?.tempClosed || 0} (TempClosed)
+NJPR : ${mpduDataStoreArray[0].NJPR?.active || 0} (Active) / ${mpduDataStoreArray[0].NJPR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NJPR?.tempClosed || 0} (TempClosed)
+WMUM : ${mpduDataStoreArray[0].WMUM?.active || 0} (Active) / ${mpduDataStoreArray[0].WMUM?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WMUM?.tempClosed || 0} (TempClosed)
+WPUN : ${mpduDataStoreArray[0].WPUN?.active || 0} (Active) / ${mpduDataStoreArray[0].WPUN?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WPUN?.tempClosed || 0} (TempClosed)
+NLUC : ${mpduDataStoreArray[0].NLUC?.active || 0} (Active) / ${mpduDataStoreArray[0].NLUC?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NLUC?.tempClosed || 0} (TempClosed)
+NEUP : ${mpduDataStoreArray[0].NEUP?.active || 0} (Active) / ${mpduDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+EORI : ${mpduDataStoreArray[0].EORI?.active || 0} (Active) / ${mpduDataStoreArray[0].EORI?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EORI?.tempClosed || 0} (TempClosed)
+ECAL : ${mpduDataStoreArray[0].ECAL?.active || 0} (Active) / ${mpduDataStoreArray[0].ECAL?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].ECAL?.tempClosed || 0} (TempClosed)
+EGAU : ${mpduDataStoreArray[0].EGAU?.active || 0} (Active) / ${mpduDataStoreArray[0].EGAU?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EGAU?.tempClosed || 0} (TempClosed)
+NSAH : ${mpduDataStoreArray[0].NSAH?.active || 0} (Active) / ${mpduDataStoreArray[0].NSAH?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NSAH?.tempClosed || 0} (TempClosed)
+NCHA : ${mpduDataStoreArray[0].NCHA?.active || 0} (Active) / ${mpduDataStoreArray[0].NCHA?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NCHA?.tempClosed || 0} (TempClosed)
+NDEL : ${mpduDataStoreArray[0].NDEL?.active || 0} (Active) / ${mpduDataStoreArray[0].NDEL?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NDEL?.tempClosed || 0} (TempClosed)
+SKAR : ${mpduDataStoreArray[0].SKAR?.active || 0} (Active) / ${mpduDataStoreArray[0].SKAR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SKAR?.tempClosed || 0} (TempClosed)
+SCOI : ${mpduDataStoreArray[0].SCOI?.active || 0} (Active) / ${mpduDataStoreArray[0].SCOI?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SCOI?.tempClosed || 0} (TempClosed)
+SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArray[0].SERN?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SERN?.tempClosed || 0} (TempClosed)
 `;
                 console.log("\nMPDU SUMMARY PREVIEW:\n" + mpduMessageBodyNational);
                 mpduAllZero = allBranchesZero(mpduDataStoreArray[0], uniqueBranchCodes);
             }
 
             // Build and print 43 Inch Vertical message body summary
-            let verticalDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "total": 0 } }];
+            let verticalDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
             let verticalAllZero = false;
             if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && dbResponse.rows.length > 0) {
                 const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
                 uniqueBranchCodes.forEach(branch => {
-                    verticalDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "total": 0, "inActiveOutletList": "" };
+                    verticalDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
                 });
                 workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
                     const findDeviceByTechworksId = dbResponse.rows.find(d => d.display_name == deviceIdElement['Techworks ID']);
@@ -703,22 +874,33 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
                         verticalDataStoreArray[0].national.total += 1;
                     }
                 });
+
+                // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
+                workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
+                    const branchCode = deviceIdElement['Branch Code'];
+                    const currentStatus = deviceIdElement['Current Status'];
+                    if (currentStatus === 'Verified & Temp Closed' && verticalDataStoreArray[0][branchCode]) {
+                        verticalDataStoreArray[0][branchCode].tempClosed += 1;
+                        verticalDataStoreArray[0].national.tempClosed += 1;
+                    }
+                });
+
                 let verticalMessageBodyNational = `
 NATIONAL 43 VERTICAL STATUS
 NATIONAL WISE
-Total : ${verticalDataStoreArray[0].national.active} (Active) / ${verticalDataStoreArray[0].national.inactive} (Inactive)
+Total : ${verticalDataStoreArray[0].national.active} (Active) / ${verticalDataStoreArray[0].national.inactive} (Inactive) / ${verticalDataStoreArray[0].national.tempClosed} (TempClosed)
 
 BRANCH WISE
-WMUM : ${verticalDataStoreArray[0].WMUM?.active || 0} (Active) / ${verticalDataStoreArray[0].WMUM?.inactive || 0} (Inactive)
-ECAL : ${verticalDataStoreArray[0].ECAL?.active || 0} (Active) / ${verticalDataStoreArray[0].ECAL?.inactive || 0} (Inactive)
-NDEL : ${verticalDataStoreArray[0].NDEL?.active || 0} (Active) / ${verticalDataStoreArray[0].NDEL?.inactive || 0} (Inactive)
-NCHA : ${verticalDataStoreArray[0].NCHA?.active || 0} (Active) / ${verticalDataStoreArray[0].NCHA?.inactive || 0} (Inactive)
-NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive)
-WPUN : ${verticalDataStoreArray[0].WPUN?.active || 0} (Active) / ${verticalDataStoreArray[0].WPUN?.inactive || 0} (Inactive)
-NJPR : ${verticalDataStoreArray[0].NJPR?.active || 0} (Active) / ${verticalDataStoreArray[0].NJPR?.inactive || 0} (Inactive)
-SBLR : ${verticalDataStoreArray[0].SBLR?.active || 0} (Active) / ${verticalDataStoreArray[0].SBLR?.inactive || 0} (Inactive)
-NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive)
-SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataStoreArray[0].SHYD?.inactive || 0} (Inactive)
+WMUM : ${verticalDataStoreArray[0].WMUM?.active || 0} (Active) / ${verticalDataStoreArray[0].WMUM?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].WMUM?.tempClosed || 0} (TempClosed)
+ECAL : ${verticalDataStoreArray[0].ECAL?.active || 0} (Active) / ${verticalDataStoreArray[0].ECAL?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].ECAL?.tempClosed || 0} (TempClosed)
+NDEL : ${verticalDataStoreArray[0].NDEL?.active || 0} (Active) / ${verticalDataStoreArray[0].NDEL?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NDEL?.tempClosed || 0} (TempClosed)
+NCHA : ${verticalDataStoreArray[0].NCHA?.active || 0} (Active) / ${verticalDataStoreArray[0].NCHA?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NCHA?.tempClosed || 0} (TempClosed)
+NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+WPUN : ${verticalDataStoreArray[0].WPUN?.active || 0} (Active) / ${verticalDataStoreArray[0].WPUN?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].WPUN?.tempClosed || 0} (TempClosed)
+NJPR : ${verticalDataStoreArray[0].NJPR?.active || 0} (Active) / ${verticalDataStoreArray[0].NJPR?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NJPR?.tempClosed || 0} (TempClosed)
+SBLR : ${verticalDataStoreArray[0].SBLR?.active || 0} (Active) / ${verticalDataStoreArray[0].SBLR?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].SBLR?.tempClosed || 0} (TempClosed)
+NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataStoreArray[0].SHYD?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].SHYD?.tempClosed || 0} (TempClosed)
 `;
                 console.log("\n43 INCH VERTICAL SUMMARY PREVIEW:\n" + verticalMessageBodyNational);
                 verticalAllZero = allBranchesZero(verticalDataStoreArray[0], uniqueBranchCodes);
@@ -735,7 +917,7 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
 
             await delay(8000);
 
-            await sendMpduMorningMessage(dbResponse.rows);
+            await sendMpduMorningMessage(dbResponse.rows, squad360Data);
             await send43InchMorningMessage(dbResponse.rows);
         } catch (error) {
             console.error('Error during morning data retrieval:', error);

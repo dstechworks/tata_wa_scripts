@@ -10,7 +10,8 @@ let authToken = AUTH_TOKEN;
 
 // console.log(` Base URL: ${baseUrl} , Auth Token: ${authToken}`);
 
-const getStatusText = (active = 0, inactive = 0) => `${active} (Active) / ${inactive} (Inactive)`;
+const getNationalStatusText = (active = 0, inactive = 0, tempClosed = 0) => `${active} (Active) / ${inactive} (InActive) / ${tempClosed} (Temp Closed)`;
+const getBranchStatusText = (active = 0, inactive = 0, tempClosed = 0) => `${active} (A) / ${inactive} (I) / ${tempClosed} (T)`;
 
 async function requestAxios(config) {
     return await axios.request(config)
@@ -592,29 +593,30 @@ async function tl_msg_squad_360(tempName, messageHeadText, phoneNum, storeName, 
 }
 
 async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
+    const national = dataOfNational[0];
     const parameters = [
-        { type: "text", text: getStatusText(dataOfNational[0]?.national?.active, dataOfNational[0]?.national?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WBHO?.active, dataOfNational[0]?.WBHO?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WNAG?.active, dataOfNational[0]?.WNAG?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WAHM?.active, dataOfNational[0]?.WAHM?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.EVIZ?.active, dataOfNational[0]?.EVIZ?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SHYD?.active, dataOfNational[0]?.SHYD?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SBLR?.active, dataOfNational[0]?.SBLR?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SCHE?.active, dataOfNational[0]?.SCHE?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NJPR?.active, dataOfNational[0]?.NJPR?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WMUM?.active, dataOfNational[0]?.WMUM?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WPUN?.active, dataOfNational[0]?.WPUN?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NLUC?.active, dataOfNational[0]?.NLUC?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NEUP?.active, dataOfNational[0]?.NEUP?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.EORI?.active, dataOfNational[0]?.EORI?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.ECAL?.active, dataOfNational[0]?.ECAL?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.EGAU?.active, dataOfNational[0]?.EGAU?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NSAH?.active, dataOfNational[0]?.NSAH?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NCHA?.active, dataOfNational[0]?.NCHA?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NDEL?.active, dataOfNational[0]?.NDEL?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SKAR?.active, dataOfNational[0]?.SKAR?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SCOI?.active, dataOfNational[0]?.SCOI?.inactive) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SERN?.active, dataOfNational[0]?.SERN?.inactive) }
+        { type: "text", text: getNationalStatusText(national?.national?.active, national?.national?.inactive, national?.national?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WBHO?.active, national?.WBHO?.inactive, national?.WBHO?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WNAG?.active, national?.WNAG?.inactive, national?.WNAG?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WAHM?.active, national?.WAHM?.inactive, national?.WAHM?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.EVIZ?.active, national?.EVIZ?.inactive, national?.EVIZ?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SHYD?.active, national?.SHYD?.inactive, national?.SHYD?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SBLR?.active, national?.SBLR?.inactive, national?.SBLR?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SCHE?.active, national?.SCHE?.inactive, national?.SCHE?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NJPR?.active, national?.NJPR?.inactive, national?.NJPR?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WMUM?.active, national?.WMUM?.inactive, national?.WMUM?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WPUN?.active, national?.WPUN?.inactive, national?.WPUN?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NLUC?.active, national?.NLUC?.inactive, national?.NLUC?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NEUP?.active, national?.NEUP?.inactive, national?.NEUP?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.EORI?.active, national?.EORI?.inactive, national?.EORI?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.ECAL?.active, national?.ECAL?.inactive, national?.ECAL?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.EGAU?.active, national?.EGAU?.inactive, national?.EGAU?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NSAH?.active, national?.NSAH?.inactive, national?.NSAH?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NCHA?.active, national?.NCHA?.inactive, national?.NCHA?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NDEL?.active, national?.NDEL?.inactive, national?.NDEL?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SKAR?.active, national?.SKAR?.inactive, national?.SKAR?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SCOI?.active, national?.SCOI?.inactive, national?.SCOI?.tempClosed ?? 0) },
+        { type: "text", text: `${national?.SERN?.active} (A) / ${national?.SERN?.inactive} (I) / ${national?.SCOI?.tempClosed ?? 0} (T) *Note: A = Active, I = Inactive, T = Temp Closed` },
     ];
 
     let variables = JSON.stringify({
@@ -681,17 +683,18 @@ async function mpduBranchMsg(tempName, phoneNum, branchCode, branchCounts, inAct
 }
 
 async function vertical43InchNationalMsg(tempName, phoneNum, dataOfNational) {
+    const national = dataOfNational[0];
     const parameters = [
-        { type: "text", text: getStatusText(dataOfNational[0]?.national?.active ?? 0, dataOfNational[0]?.national?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WMUM?.active ?? 0, dataOfNational[0]?.WMUM?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.ECAL?.active ?? 0, dataOfNational[0]?.ECAL?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NDEL?.active ?? 0, dataOfNational[0]?.NDEL?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NCHA?.active ?? 0, dataOfNational[0]?.NCHA?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.WPUN?.active ?? 0, dataOfNational[0]?.WPUN?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NJPR?.active ?? 0, dataOfNational[0]?.NJPR?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SBLR?.active ?? 0, dataOfNational[0]?.SBLR?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.NEUP?.active ?? 0, dataOfNational[0]?.NEUP?.inactive ?? 0) },
-        { type: "text", text: getStatusText(dataOfNational[0]?.SHYD?.active ?? 0, dataOfNational[0]?.SHYD?.inactive ?? 0) },
+        { type: "text", text: getNationalStatusText(national?.national?.active ?? 0, national?.national?.inactive ?? 0, national?.national?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WMUM?.active ?? 0, national?.WMUM?.inactive ?? 0, national?.WMUM?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.ECAL?.active ?? 0, national?.ECAL?.inactive ?? 0, national?.ECAL?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NDEL?.active ?? 0, national?.NDEL?.inactive ?? 0, national?.NDEL?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NCHA?.active ?? 0, national?.NCHA?.inactive ?? 0, national?.NCHA?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.WPUN?.active ?? 0, national?.WPUN?.inactive ?? 0, national?.WPUN?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NJPR?.active ?? 0, national?.NJPR?.inactive ?? 0, national?.NJPR?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.SBLR?.active ?? 0, national?.SBLR?.inactive ?? 0, national?.SBLR?.tempClosed ?? 0) },
+        { type: "text", text: getBranchStatusText(national?.NEUP?.active ?? 0, national?.NEUP?.inactive ?? 0, national?.NEUP?.tempClosed ?? 0) },
+        { type: "text", text: `${national?.SHYD?.active ?? 0} (A) / ${national?.SHYD?.inactive ?? 0} (I) / ${national?.SHYD?.tempClosed ?? 0} (T) *Note: A = Active, I = Inactive, T = Temp Closed` },
     ];
 
     let variables = JSON.stringify({
