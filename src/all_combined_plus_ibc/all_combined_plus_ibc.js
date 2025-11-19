@@ -261,7 +261,7 @@ async function getSquad360Data() {
     // Filter screens with displayStatus="Active" and screenType="backwall"
     const filteredScreens = allScreensData.filter(screen =>
       screen.displayStatus == "Active" &&
-      screen.screenType == "backwall"
+      screen.screenType == "backwall" || screen.screenType == "digi-quads"
     );
 
     // Create a map of screenId to status for quick lookup
