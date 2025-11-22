@@ -35,6 +35,7 @@ let mpduBranchWisePOCNum = {
     },
     "EVIZ": {
         "Harini Podagatlapalli": "6303239551",
+        "Satyadeosharan Nirala": "8349603217",
         "Rohan": "9888311338",
         "Sandip": "9319798915",
     },
