@@ -350,19 +350,43 @@ async function sendMpduMorningMessage(dbData, squad360Data = []) {
                 }
             });
 
-            // Add Squad360 data to national counts (reusing fetched data)
+            // Add Squad360 data to national and branch-wise counts (reusing fetched data)
             let squad360Active = 0;
             let squad360Inactive = 0;
             if (squad360Data.length > 0) {
                 squad360Data.forEach(screen => {
+                    const branchCode = screen.branch;
+                    // Check if branch exists in dataStoreArray, if not initialize it
+                    if (branchCode && !dataStoreArray[0][branchCode]) {
+                        dataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+                    }
+
                     if (screen.isActive === 'Active') {
                         dataStoreArray[0].national.active += 1;
                         squad360Active += 1;
+                        // Add to branch-wise count if branch exists
+                        if (branchCode && dataStoreArray[0][branchCode]) {
+                            dataStoreArray[0][branchCode].active += 1;
+                        }
                     } else {
                         dataStoreArray[0].national.inactive += 1;
                         squad360Inactive += 1;
+                        // Add to branch-wise count if branch exists
+                        if (branchCode && dataStoreArray[0][branchCode]) {
+                            dataStoreArray[0][branchCode].inactive += 1;
+                            const outletName = screen.name || screen.wdName || '';
+                            if (outletName) {
+                                dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                                    ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
+                                    : outletName;
+                            }
+                        }
                     }
                     dataStoreArray[0].national.total += 1;
+                    // Add to branch-wise total if branch exists
+                    if (branchCode && dataStoreArray[0][branchCode]) {
+                        dataStoreArray[0][branchCode].total += 1;
+                    }
                 });
             }
 
@@ -453,21 +477,43 @@ async function sendMpduEveningMessage(apiData, squad360Data = []) {
             }
         });
 
-        // Add Squad360 data to national counts (reusing fetched data)
+        // Add Squad360 data to national and branch-wise counts (reusing fetched data)
         let squad360Active = 0;
         let squad360Inactive = 0;
         if (squad360Data.length > 0) {
             squad360Data.forEach(screen => {
+                const branchCode = screen.branch;
+                // Only process if branch is in targetBranches
+                const isTargetBranch = branchCode && targetBranches.includes(branchCode);
+
                 if (screen.isActive === 'Active') {
                     dataStoreArray[0].national.active += 1;
                     squad360Active += 1;
+                    // Add to branch-wise count if branch is in targetBranches
+                    if (isTargetBranch && dataStoreArray[0][branchCode]) {
+                        dataStoreArray[0][branchCode].active += 1;
+                    }
                 } else {
                     dataStoreArray[0].national.inactive += 1;
                     squad360Inactive += 1;
+                    // Add to branch-wise count if branch is in targetBranches
+                    if (isTargetBranch && dataStoreArray[0][branchCode]) {
+                        dataStoreArray[0][branchCode].inactive += 1;
+                        const outletName = screen.name || screen.wdName || '';
+                        if (outletName) {
+                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                                ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
+                                : outletName;
+                        }
+                    }
                 }
                 dataStoreArray[0].national.total += 1;
+                // Add to branch-wise total if branch is in targetBranches
+                if (isTargetBranch && dataStoreArray[0][branchCode]) {
+                    dataStoreArray[0][branchCode].total += 1;
+                }
             });
-            console.log(`SQUAD-360: Added ${squad360Data.length} devices (${squad360Active} Active / ${squad360Inactive} Inactive) to national counts`);
+            console.log(`SQUAD-360: Added ${squad360Data.length} devices (${squad360Active} Active / ${squad360Inactive} Inactive) to national and branch counts`);
         }
 
         // Loop for each branch
@@ -807,14 +853,32 @@ async function startScript() {
                 let squad360PreviewInactive = 0;
                 if (squad360Data.length > 0) {
                     squad360Data.forEach(screen => {
+                        const branchCode = screen.branch;
+                        // Check if branch exists in mpduDataStoreArray, if not initialize it
+                        if (branchCode && !mpduDataStoreArray[0][branchCode]) {
+                            mpduDataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
+                        }
+
                         if (screen.isActive === 'Active') {
                             mpduDataStoreArray[0].national.active += 1;
                             squad360PreviewActive += 1;
+                            // Add to branch-wise count if branch exists
+                            if (branchCode && mpduDataStoreArray[0][branchCode]) {
+                                mpduDataStoreArray[0][branchCode].active += 1;
+                            }
                         } else {
                             mpduDataStoreArray[0].national.inactive += 1;
                             squad360PreviewInactive += 1;
+                            // Add to branch-wise count if branch exists
+                            if (branchCode && mpduDataStoreArray[0][branchCode]) {
+                                mpduDataStoreArray[0][branchCode].inactive += 1;
+                            }
                         }
                         mpduDataStoreArray[0].national.total += 1;
+                        // Add to branch-wise total if branch exists
+                        if (branchCode && mpduDataStoreArray[0][branchCode]) {
+                            mpduDataStoreArray[0][branchCode].total += 1;
+                        }
                     });
                 }
 

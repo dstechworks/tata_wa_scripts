@@ -616,7 +616,7 @@ async function mpduNationalMsg(tempName, phoneNum, dataOfNational) {
         { type: "text", text: getBranchStatusText(national?.NDEL?.active, national?.NDEL?.inactive, national?.NDEL?.tempClosed ?? 0) },
         { type: "text", text: getBranchStatusText(national?.SKAR?.active, national?.SKAR?.inactive, national?.SKAR?.tempClosed ?? 0) },
         { type: "text", text: getBranchStatusText(national?.SCOI?.active, national?.SCOI?.inactive, national?.SCOI?.tempClosed ?? 0) },
-        { type: "text", text: `${national?.SERN?.active} (A) / ${national?.SERN?.inactive} (I) / ${national?.SCOI?.tempClosed ?? 0} (T) *Note: A = Active, I = Inactive, T = Temp Closed` },
+        { type: "text", text: `${national?.SERN?.active} (A) / ${national?.SERN?.inactive} (I) / ${national?.SERN?.tempClosed ?? 0} (T) *Note: A = Active, I = Inactive, T = Temp Closed` },
     ];
 
     let variables = JSON.stringify({
