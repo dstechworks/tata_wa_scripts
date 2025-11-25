@@ -44,7 +44,7 @@ cron.schedule('0 17 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Daily @ 12:00 PM and 5:00 PM: Run MPDU 43 Vertical
-['0 12 * * *', '32 19 * * *'].forEach(schedule => {
+['0 12 * * *', '51 18 * * *'].forEach(schedule => {
     cron.schedule(schedule, () => {
         runScript('MPDU 43 Vertical', '~/tata_wa_scripts/src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
     }, { timezone: TIMEZONE });
