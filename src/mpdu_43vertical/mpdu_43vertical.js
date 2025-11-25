@@ -49,11 +49,11 @@ const tokenStorage = {
 };
 let NationalPOCNum = {
     "Hitesh": "8700685675",
-    "Dhruv": "8826909378",
-    "Sandip": "9319798915",
-    "Rusum": "9266903108",
-    "Mark": "7871419732",
-    "Rohan": "9888311338"
+    // "Dhruv": "8826909378",
+    // "Sandip": "9319798915",
+    // "Rusum": "9266903108",
+    // "Mark": "7871419732",
+    // "Rohan": "9888311338"
 }
 let eveningBranchNum = {
     "Hitesh": "8700685675",
@@ -713,6 +713,7 @@ async function sendMpduMorningMessage(dataStoreArray, uniqueBranchCodes) {
         await delay(500);
     }
 
+    return;
     await delay(5000);
 
     console.log("Sending MPDU Branch Messages...");
@@ -789,6 +790,7 @@ async function send43InchMorningMessage(dataStoreArray, uniqueBranchCodes) {
         await delay(500);
     }
 
+    return;
     await delay(5000);
 
     console.log("Sending 43 Inch Vertical Branch Messages...");
@@ -870,7 +872,10 @@ async function startScript() {
     console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
 
     const currentHour = currentTime.hour();
-    if (currentHour >= 16) {
+    if (currentHour < 16) {
+        console.log(`As of now evening messages paused !!`);
+        return;
+
         console.log(`\nIt's evening time, script run.`);
         console.log(`EVENING DATA GET DATE :- ${currentTime.format("YYYY-MM-DD")}`, "\n");
         try {
@@ -1082,8 +1087,8 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
             try {
                 const techworksFilePath = await generateTechworksExcel(apiData, dailyFilesFolder);
                 const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
-                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
-                console.log("Excel files generated and email sent successfully.\n");
+                // await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
+                // console.log("Excel files generated and email sent successfully.\n");
             } catch (error) {
                 console.error("Error generating Excel files or sending email:", error);
                 // Continue with message sending even if email fails

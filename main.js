@@ -44,11 +44,11 @@ cron.schedule('0 17 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Daily @ 12:00 PM and 5:00 PM: Run MPDU 43 Vertical
-// ['0 12 * * *', '0 17 * * *'].forEach(schedule => {
-//     cron.schedule(schedule, () => {
-//         runScript('MPDU 43 Vertical', '~/tata_wa_scripts/src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
-//     }, { timezone: TIMEZONE });
-// });
+['0 12 * * *', '32 19 * * *'].forEach(schedule => {
+    cron.schedule(schedule, () => {
+        runScript('MPDU 43 Vertical', '~/tata_wa_scripts/src/mpdu_43vertical/mpdu_43vertical.js'); // 12 PM & 5 PM
+    }, { timezone: TIMEZONE });
+});
 
 console.log(`Cron jobs started at ${moment().tz(TIMEZONE).format('YYYY-MM-DD hh:mm:ss A')}`);
 
