@@ -3,10 +3,13 @@ const { mpduBranchWisePOCNum } = require('../utils/constants');
 const { delay } = require('../utils/helpers');
 const querystring = require('querystring');
 const moment = require('moment-timezone');
+const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
 const axios = require('axios');
+const xlsx = require('xlsx');
 const path = require('path');
+const fs = require('fs');
 
 const pool = new Pool({
     user: "postgres",
@@ -89,6 +92,396 @@ function allBranchesZero(dataStore, branchList) {
         const b = dataStore[branch];
         return (!b || ((b.active === 0 || b.active === undefined) && (b.inactive === 0 || b.inactive === undefined)));
     });
+}
+
+// =================================================================================================
+// COMMON CALCULATION FUNCTIONS
+// =================================================================================================
+
+// Common function to calculate device counts from API data
+function calculateDeviceCounts(sheetName, apiData, targetBranches = null, statusFilter = 'Verified & Currently Installed') {
+    let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
+
+    if (!workbookData[sheetName] || workbookData[sheetName].length === 0 || apiData.length === 0) {
+        return dataStoreArray;
+    }
+
+    const uniqueBranchCodes = getUniqueByKey(workbookData[sheetName], 'Branch Code');
+    const branchesToProcess = targetBranches || uniqueBranchCodes;
+
+    // Initialize branch data
+    branchesToProcess.forEach(branch => {
+        if (uniqueBranchCodes.includes(branch)) {
+            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+        }
+    });
+
+    // Count active/inactive - Use provided status filter
+    workbookData[sheetName].forEach(deviceIdElement => {
+        const currentStatus = deviceIdElement['Current Status'];
+        const branchCode = deviceIdElement['Branch Code'];
+
+        // Only count devices with the specified status for active/inactive/total
+        if ((targetBranches ? targetBranches.includes(branchCode) : true) && currentStatus === statusFilter) {
+            const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
+
+            if (findDeviceByTechworksId) {
+                const onlineDevice = apiData.find(d =>
+                    d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1
+                );
+                const outletName = deviceIdElement['Outlet Name']?.trim();
+
+                if (onlineDevice) {
+                    dataStoreArray[0][branchCode].active += 1;
+                    dataStoreArray[0].national.active += 1;
+                } else {
+                    dataStoreArray[0][branchCode].inactive += 1;
+                    dataStoreArray[0].national.inactive += 1;
+                    if (outletName) {
+                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                            ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
+                            : outletName;
+                    }
+                }
+                dataStoreArray[0][branchCode].total += 1;
+                dataStoreArray[0].national.total += 1;
+            }
+        }
+    });
+
+    // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
+    workbookData[sheetName].forEach(deviceIdElement => {
+        const branchCode = deviceIdElement['Branch Code'];
+        const currentStatus = deviceIdElement['Current Status'];
+        const outletName = deviceIdElement['Outlet Name']?.trim();
+
+        if (currentStatus === 'Verified & Temp Closed' && outletName &&
+            (targetBranches ? targetBranches.includes(branchCode) : true) &&
+            dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode].tempClosed += 1;
+            dataStoreArray[0].national.tempClosed += 1;
+            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
+                : outletName;
+        }
+    });
+
+    return dataStoreArray;
+}
+
+// Common function to add Squad360 data
+function addSquad360Data(dataStoreArray, squad360Data, targetBranches = null, uniqueBranchCodes = null) {
+    let squad360Active = 0;
+    let squad360Inactive = 0;
+    let squad360Skipped = 0;
+
+    if (squad360Data.length === 0) {
+        return { squad360Active, squad360Inactive, squad360Skipped };
+    }
+
+    squad360Data.forEach(screen => {
+        const branchCode = screen.branch;
+        const branchesToCheck = targetBranches || uniqueBranchCodes;
+
+        // Only process if branch exists in target branches or uniqueBranchCodes
+        if (!branchCode || (branchesToCheck && !branchesToCheck.includes(branchCode))) {
+            squad360Skipped++;
+            return;
+        }
+
+        // Ensure branch exists in dataStoreArray
+        if (!dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+        }
+
+        if (screen.isActive === 'Active') {
+            dataStoreArray[0].national.active += 1;
+            dataStoreArray[0][branchCode].active += 1;
+            squad360Active += 1;
+        } else {
+            dataStoreArray[0].national.inactive += 1;
+            dataStoreArray[0][branchCode].inactive += 1;
+            squad360Inactive += 1;
+            const outletName = screen.name || screen.wdName || '';
+            if (outletName) {
+                dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                    ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
+                    : outletName;
+            }
+        }
+        dataStoreArray[0].national.total += 1;
+        dataStoreArray[0][branchCode].total += 1;
+    });
+
+    return { squad360Active, squad360Inactive, squad360Skipped };
+}
+
+// Common function to validate branch totals
+function validateBranchTotals(dataStoreArray, branchesToCheck, reportType) {
+    let branchWiseActiveSum = 0;
+    let branchWiseInactiveSum = 0;
+    let branchWiseTempClosedSum = 0;
+    let branchWiseTotalSum = 0;
+
+    branchesToCheck.forEach(branch => {
+        if (dataStoreArray[0][branch]) {
+            branchWiseActiveSum += dataStoreArray[0][branch].active || 0;
+            branchWiseInactiveSum += dataStoreArray[0][branch].inactive || 0;
+            branchWiseTempClosedSum += dataStoreArray[0][branch].tempClosed || 0;
+            branchWiseTotalSum += dataStoreArray[0][branch].total || 0;
+        }
+    });
+
+    console.log(`\n--- ${reportType} Branch-wise Total Validation ---`);
+    console.log(`National Total - Active: ${dataStoreArray[0].national.active}, Inactive: ${dataStoreArray[0].national.inactive}, TempClosed: ${dataStoreArray[0].national.tempClosed}, Total: ${dataStoreArray[0].national.total}`);
+    console.log(`Sum of All Branches - Active: ${branchWiseActiveSum}, Inactive: ${branchWiseInactiveSum}, TempClosed: ${branchWiseTempClosedSum}, Total: ${branchWiseTotalSum}`);
+    console.log(`Difference - Active: ${dataStoreArray[0].national.active - branchWiseActiveSum}, Inactive: ${dataStoreArray[0].national.inactive - branchWiseInactiveSum}, TempClosed: ${dataStoreArray[0].national.tempClosed - branchWiseTempClosedSum}, Total: ${dataStoreArray[0].national.total - branchWiseTotalSum}`);
+
+    // Log branch-wise breakdown
+    console.log(`\n--- ${reportType} Branch-wise Breakdown ---`);
+    branchesToCheck.forEach(branch => {
+        if (dataStoreArray[0][branch]) {
+            console.log(`${branch}: Active: ${dataStoreArray[0][branch].active || 0}, Inactive: ${dataStoreArray[0][branch].inactive || 0}, TempClosed: ${dataStoreArray[0][branch].tempClosed || 0}, Total: ${dataStoreArray[0][branch].total || 0}`);
+        }
+    });
+
+    // Check if there's a difference
+    const hasDifference = dataStoreArray[0].national.active - branchWiseActiveSum !== 0 ||
+        dataStoreArray[0].national.inactive - branchWiseInactiveSum !== 0 ||
+        dataStoreArray[0].national.tempClosed - branchWiseTempClosedSum !== 0 ||
+        dataStoreArray[0].national.total - branchWiseTotalSum !== 0;
+
+    return { hasDifference, branchWiseActiveSum, branchWiseInactiveSum, branchWiseTempClosedSum, branchWiseTotalSum };
+}
+
+// =================================================================================================
+// EXCEL GENERATION AND EMAIL FUNCTIONS
+// =================================================================================================
+
+// Email configuration - Update these with your SMTP settings
+const emailConfig = {
+    host: 'smtp.dreamhost.com', // Update with your SMTP host
+    port: 465,
+    secure: true, // true for 465, false for other ports
+    auth: {
+        user: 'hitesh.kumar@techworks.co.in', // Update with your email
+        pass: '4VqvS&RY*ZFnqaU1' // Update with your app password
+    }
+};
+
+// Function to generate Excel file for Techworks data
+async function generateTechworksExcel(apiData, folderPath) {
+    try {
+        // Ensure the folder exists
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
+        }
+
+        const formattedDate = moment().tz('Asia/Kolkata').format('DD-MMM-YYYY-hhA');
+        const fileName = `techworksMpdu_${formattedDate}.xlsx`;
+        const filePath = path.join(folderPath, fileName);
+
+        // Prepare data for Excel - flatten the API data structure
+        const excelData = apiData.map(item => ({
+            'Current Time': moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A'),
+            'Display': item.display || '',
+            'Logged In': item.loggedIn || 0,
+            'Source Server': item.sourceServer || '',
+            'ID': item.id || '',
+            'Status': item.loggedIn === 1 ? 'Active' : 'Inactive'
+        }));
+
+        const ws = xlsx.utils.json_to_sheet(excelData);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Techworks Data");
+        xlsx.writeFile(wb, filePath);
+
+        console.log(`\nTechworks Excel file saved: ${fileName}`);
+        return filePath;
+    } catch (error) {
+        console.error("Error generating Techworks Excel file:", error);
+        throw error;
+    }
+}
+
+// Function to generate Excel file for Squad360 data
+async function generateSquad360Excel(squad360Data, folderPath) {
+    try {
+        // Ensure the folder exists
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
+        }
+
+        const formattedDate = moment().tz('Asia/Kolkata').format('DD-MMM-YYYY-hhA');
+        const fileName = `squad360Mpdu_${formattedDate}.xlsx`;
+        const filePath = path.join(folderPath, fileName);
+
+        // Prepare data for Excel
+        const excelData = squad360Data.map(item => ({
+            'Current Time': moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A'),
+            'Screen ID': item.screenId || '',
+            'Display Status': item.displayStatus || '',
+            'Is Active': item.isActive || '',
+            'Branch': item.branch || '',
+            'Dhanush ID': item.dhanushId || '',
+            'WD Code': item.wdCode || '',
+            'WD Name': item.wdName || '',
+            'Screen Name': item.name || '',
+            'Screen Address': item.address || '',
+            'Pin Code': item.pinCode || '',
+            'City': item.city || '',
+            'State': item.state || '',
+            'Status': item.status || '',
+            'Channel': item.channel || '',
+            'Owner Name': item.ownerName || '',
+            'Owner Contact': item.ownerContactNumber || '',
+            'Team Lead Name': item.teamLeadName || '',
+            'Team Lead Contact': item.teamLeadContactNumber || '',
+            'Area Executive Name': item.areaExecutiveName || '',
+            'Area Executive Contact': item.areaExecutiveContactNumber || '',
+            'Area Manager Name': item.areaManagerName || '',
+            'Area Manager Contact': item.areaManagerContactNumber || '',
+            'Area Manager Email': item.areaManagerMailId || ''
+        }));
+
+        const ws = xlsx.utils.json_to_sheet(excelData);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Squad360 Data");
+        xlsx.writeFile(wb, filePath);
+
+        console.log(`\nSquad360 Excel file saved: ${fileName}`);
+        return filePath;
+    } catch (error) {
+        console.error("Error generating Squad360 Excel file:", error);
+        throw error;
+    }
+}
+
+// Function to send email with Excel attachments
+async function sendEmailWithAttachments(techworksFilePath, squad360FilePath) {
+    try {
+        // Create transporter
+        const transporter = nodemailer.createTransport(emailConfig);
+
+        const formattedDate = moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A');
+
+        // Email content
+        const mailOptions = {
+            from: 'reports@techworks.co.in',
+            // to: 'hitesh.kumar@techworks.co.in',
+            to: 'rohanwork2002@gmail.com',
+            cc: 'dhruv@techworks.co.in, rusum@techworks.co.in, sandip@techworks.co.in, hitesh.kumar@techworks.co.in',
+            subject: `MPDU Squad360 Online/Offline Whatsapp Report - ${formattedDate}`,
+            html: `<h6>Please find the attachment.</h6>
+            <p>&nbsp;</p>
+            <table style="width:450px; font-size: 10pt; font-family: Verdana, sans-serif; background: transparent !important;"
+                border="0" cellspacing="0" cellpadding="0">
+                <tbody>
+                    <tr>
+                        <td style="width: 200px; font-size: 10pt; font-family: Verdana, sans-serif; vertical-align: top;"
+                            valign="top">
+                            <p style="margin-bottom: 18px; padding: 0px;"><span
+                                    style="font-size: 12pt; font-family: Verdana, sans-serif; color: #183884; font-weight: bold;">Techworks
+                                    Reports<br /></span><span
+                                    style="font-family: Verdana, sans-serif; font-size: 9pt; color: #183884;">DS Techworks
+                                    Solutions</span></p>
+                            <p style="margin-top: 0px; margin-bottom: 18px; padding: 0px;"><a
+                                    href="http://www.vcard.techworksworld.com/techworks_reports/" target="_blank"><img
+                                        style="width: 120px; height: auto; border: 0;"
+                                        src="https://raw.githubusercontent.com/tw-designer/tw-emp-qr-links/main/qr_techworks_reports.png"
+                                        width="120" border="0" /></a></p>
+                            <p
+                                style="margin-bottom: 0px; padding: 0px; font-family: Verdana, sans-serif; font-size: 9pt; line-height: 12pt;">
+                                <a style="color: #e25422; text-decoration: none; font-weight: bold;"
+                                    href="http://www.techworksworld.com" rel="noopener"><span
+                                        style="text-decoration: none; font-size: 9pt; line-height: 12pt; color: #e25422; font-family: Verdana, sans-serif; font-weight: bold;">www.techworksworld.com</span></a>
+                            </p>
+                        </td>
+                        <td style="width: 10px; min-width: 10px; border-right: 1px solid #e25422;">&nbsp;</td>
+                        <td style="width: 10px; min-width: 10px;">&nbsp;</td>
+                        <td style="width: 250px; font-size: 10pt; color: #444444; font-family: Verdana, sans-serif; vertical-align: top;"
+                            valign="top">
+                            <p
+                                style="font-family: Verdana, sans-serif; padding: 0px; font-size: 9pt; line-height: 14pt; margin-bottom: 14px;">
+                                <span style="font-family: Verdana, sans-serif; font-size: 9pt; line-height: 14pt;"><span
+                                        style="font-size: 9pt; line-height: 13pt; color: #262626;"><strong>E: </strong></span><a
+                                        style="font-size: 9pt; color: #262626; text-decoration: none;"
+                                        href="mailto:reports@techworks.co.in"><span
+                                            style="text-decoration: none; font-size: 9pt; line-height: 14pt; color: #262626; font-family: Verdana, sans-serif;">reports@techworks.co.in</span></a><span><br /></span></span><span><span
+                                        style="font-size: 9pt; color: #262626;"><strong>T:</strong></span><span
+                                        style="font-size: 9pt; color: #262626;">(+91)
+                                        8920131195</span><span><br /></span></span><span><span
+                                        style="font-size: 9pt; color: #262626;"><strong>A:</strong></span><span
+                                        style="font-size: 9pt; color: #262626;"> O-7, 2nd Floor Lajpat Nagar-II, </span><span
+                                        style="color: #262626;">New Delhi-110024, India</span></span></p>
+                            <p style="margin-bottom: 0px; padding: 0px;"><span><a
+                                        href="https://www.facebook.com/TechworksSolutionsPvtLtd/" rel="noopener"><img
+                                            style="border: 0; height: 22px; width: 22px;"
+                                            src="https://www.mail-signatures.com/signature-generator/img/templates/inclusive/fb.png"
+                                            width="22" border="0" /></a>&nbsp;</span><span><a
+                                        href="https://www.linkedin.com/company/ds-techworks-solutions-pvt-ltd/" rel="noopener"><img
+                                            style="border: 0; height: 22px; width: 22px;"
+                                            src="https://www.mail-signatures.com/signature-generator/img/templates/inclusive/ln.png"
+                                            width="22" border="0" /></a>&nbsp;</span><span><a href="https://twitter.com/techworks14"
+                                        rel="noopener"><img style="border: 0; height: 22px; width: 22px;"
+                                            src="https://www.mail-signatures.com/signature-generator/img/templates/inclusive/tt.png"
+                                            width="22" border="0" /></a>&nbsp;</span><span><a
+                                        href="https://www.youtube.com/@TechworksDigitalSolutions" rel="noopener"><img
+                                            style="border: 0; height: 22px; width: 22px;"
+                                            src="https://www.mail-signatures.com/signature-generator/img/templates/inclusive/yt.png"
+                                            width="22" border="0" /></a>&nbsp;</span><span><a
+                                        href="https://www.instagram.com/techworks140/" rel="noopener"><img
+                                            style="border: 0; height: 22px; width: 22px;"
+                                            src="https://www.mail-signatures.com/signature-generator/img/templates/inclusive/it.png"
+                                            width="22" border="0" /></a></span></p>
+                        </td>
+                    </tr>
+                    <tr style="width: 420px;">
+                        <td style="padding-top: 14px;" colspan="4"><a href="https://techworksworld.com/" rel="noopener"><img
+                                    style="width: 420px; height: auto; border: 0;" src="https://i.imgur.com/QoPxSPy.png" width="420"
+                                    border="0" /></a></td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top: 14px; text-align: justify;" colspan="4">
+                            <table
+                                style="width: 420px; font-size: 10pt; font-family: Verdana, sans-serif; background: transparent !important;"
+                                border="0" cellspacing="0" cellpadding="0">
+                                <tbody>
+                                    <tr>
+                                        <td style="font-size: 8pt; color: #b2b2b2; line-height: 9pt; text-align: justify;">The
+                                            content of this email is confidential and intended for the recipient specified in
+                                            message only. It is strictly forbidden to share any part of this message with any third
+                                            party,without a written consent of the sender. If you received this message by
+                                            mistake,please reply to this message and follow with its deletion,so that we can ensure
+                                            such a mistake does not occur in the future.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>`,
+            attachments: [
+                // {
+                //     filename: path.basename(techworksFilePath),
+                //     path: techworksFilePath
+                // },
+                {
+                    filename: path.basename(squad360FilePath),
+                    path: squad360FilePath
+                }
+            ]
+        };
+
+        // Send email
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`\nEmail sent successfully: ${info.messageId}`);
+        console.log(`Recipients: ${mailOptions.to}`);
+        return true;
+    } catch (error) {
+        console.error("Error sending email:", error);
+        throw error;
+    }
 }
 
 // =================================================================================================
@@ -304,387 +697,131 @@ async function getSquad360Data() {
 // =================================================================================================
 // --- MPDU SCRIPT ---
 // =================================================================================================
-async function sendMpduMorningMessage(dbData, squad360Data = []) {
+async function sendMpduMorningMessage(dataStoreArray, uniqueBranchCodes) {
     console.log("\n--- Starting MPDU Morning Report ---");
-    if (workbookData['All Device'] && workbookData['All Device'].length > 0 && dbData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
-        const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
-        uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
-        });
 
-        if (uniqueBranchCodes.length == 21) {
-            workbookData['All Device'].forEach(deviceIdElement => {
-                const findDeviceByTechworksId = dbData.find(d => d.display_name == deviceIdElement['Techworks ID']);
-                const branchCode = deviceIdElement['Branch Code'];
+    if (!dataStoreArray || !dataStoreArray[0] || uniqueBranchCodes.length !== 21) {
+        console.log("MPDU: BRANCH COUNT NOT MATCHED OR DATA NOT PROVIDED");
+        return;
+    }
 
-                if (findDeviceByTechworksId) {
-                    const onlineDevice = dbData.find(d => d.display_name.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && Number(d.display_count) > 0);
-                    const outletName = deviceIdElement['Outlet Name'].trim();
+    console.log("Sending MPDU National Messages...");
+    for (let key in NationalPOCNum) {
+        let phoneNum = `+91${NationalPOCNum[key]}`;
+        let nationalMsgRes = await mpduNationalMsg("national_temp_for_mpdu", phoneNum, dataStoreArray);
+        console.log(`MPDU National: ${key} ---> ${nationalMsgRes}`);
+        await delay(500);
+    }
 
-                    if (onlineDevice) {
-                        dataStoreArray[0][branchCode].active += 1;
-                        dataStoreArray[0].national.active += 1;
-                    } else {
-                        dataStoreArray[0][branchCode].inactive += 1;
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                        dataStoreArray[0].national.inactive += 1;
-                    }
-                    dataStoreArray[0][branchCode].total += 1;
-                    dataStoreArray[0].national.total += 1;
-                }
-            });
+    await delay(5000);
 
-            // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-            workbookData['All Device'].forEach(deviceIdElement => {
-                const branchCode = deviceIdElement['Branch Code'];
-                const currentStatus = deviceIdElement['Current Status'];
-                const outletName = deviceIdElement['Outlet Name']?.trim();
-
-                if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
-                    dataStoreArray[0][branchCode].tempClosed += 1;
-                    dataStoreArray[0].national.tempClosed += 1;
-                    dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
-                        ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
-                        : outletName;
-                }
-            });
-
-            // Add Squad360 data to national and branch-wise counts (reusing fetched data)
-            let squad360Active = 0;
-            let squad360Inactive = 0;
-            if (squad360Data.length > 0) {
-                squad360Data.forEach(screen => {
-                    const branchCode = screen.branch;
-                    // Check if branch exists in dataStoreArray, if not initialize it
-                    if (branchCode && !dataStoreArray[0][branchCode]) {
-                        dataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
-                    }
-
-                    if (screen.isActive === 'Active') {
-                        dataStoreArray[0].national.active += 1;
-                        squad360Active += 1;
-                        // Add to branch-wise count if branch exists
-                        if (branchCode && dataStoreArray[0][branchCode]) {
-                            dataStoreArray[0][branchCode].active += 1;
-                        }
-                    } else {
-                        dataStoreArray[0].national.inactive += 1;
-                        squad360Inactive += 1;
-                        // Add to branch-wise count if branch exists
-                        if (branchCode && dataStoreArray[0][branchCode]) {
-                            dataStoreArray[0][branchCode].inactive += 1;
-                            const outletName = screen.name || screen.wdName || '';
-                            if (outletName) {
-                                dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
-                                    ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
-                                    : outletName;
-                            }
-                        }
-                    }
-                    dataStoreArray[0].national.total += 1;
-                    // Add to branch-wise total if branch exists
-                    if (branchCode && dataStoreArray[0][branchCode]) {
-                        dataStoreArray[0][branchCode].total += 1;
-                    }
-                });
-            }
-
-
-            console.log("Sending MPDU National Messages...");
-            for (let key in NationalPOCNum) {
-                let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await mpduNationalMsg("national_temp_for_mpdu", phoneNum, dataStoreArray);
-                console.log(`MPDU National: ${key} ---> ${nationalMsgRes}`);
+    console.log("Sending MPDU Branch Messages...");
+    for (const branch of uniqueBranchCodes) {
+        if (mpduBranchWisePOCNum[branch]) {
+            const branchCounts = dataStoreArray[0][branch];
+            for (const pocName in mpduBranchWisePOCNum[branch]) {
+                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+                let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
+                let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                let branchMsgRes = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
+                console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
                 await delay(500);
             }
-
-            await delay(5000);
-
-            console.log("Sending MPDU Branch Messages...");
-            for (const branch of uniqueBranchCodes) {
-                if (mpduBranchWisePOCNum[branch]) {
-                    const branchCounts = dataStoreArray[0][branch];
-                    for (const pocName in mpduBranchWisePOCNum[branch]) {
-                        let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                        let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
-                        let branchMsgRes = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
-                        console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
-                        await delay(500);
-                    }
-                }
-            }
-        } else {
-            console.log("MPDU: BRANCH COUNT NOT MATCHED");
         }
-    } else {
-        console.log("MPDU: NOT FIND DATA LENGTH OF DATA GET FROM DB OR GOOGLE SHEETS");
     }
 }
 
-async function sendMpduEveningMessage(apiData, squad360Data = []) {
+async function sendMpduEveningMessage(dataStoreArray, targetBranches) {
     console.log("\n--- Starting MPDU Evening Report ---");
 
-    const targetBranches = ["SBLR", "WPUN", "SCHE", "NDEL"]; // ✅ dynamic
+    if (!dataStoreArray || !dataStoreArray[0] || !targetBranches || targetBranches.length === 0) {
+        console.log("MPDU: DATA NOT PROVIDED");
+        return;
+    }
 
-    if (workbookData['All Device']?.length > 0 && apiData.length > 0) {
-
-        let dataStoreArray = [{ national: { active: 0, inactive: 0, tempClosed: 0, total: 0 } }];
-
-        const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
-
-        // Initialize branch data
-        targetBranches.forEach(branch => {
-            if (uniqueBranchCodes.includes(branch)) {
-                dataStoreArray[0][branch] = { active: 0, inactive: 0, tempClosed: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
-            }
-        });
-
-        // Count active/inactive
-        workbookData['All Device'].forEach(deviceIdElement => {
-            const branchCode = deviceIdElement['Branch Code'];
-            if (targetBranches.includes(branchCode)) {
-                const findDeviceByTechworksId = apiData.find(d => d.display == deviceIdElement['Techworks ID']);
-                if (findDeviceByTechworksId) {
-                    const onlineDevice = apiData.find(
-                        d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && d.loggedIn == 1
-                    );
-                    const outletName = deviceIdElement['Outlet Name'].trim();
-
-                    if (onlineDevice) {
-                        dataStoreArray[0][branchCode].active++;
-                    } else {
-                        dataStoreArray[0][branchCode].inactive++;
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                    }
-                }
-            }
-        });
-
-        // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-        workbookData['All Device'].forEach(deviceIdElement => {
-            const branchCode = deviceIdElement['Branch Code'];
-            const currentStatus = deviceIdElement['Current Status'];
-            const outletName = deviceIdElement['Outlet Name']?.trim();
-
-            if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
-                dataStoreArray[0][branchCode].tempClosed += 1;
-                dataStoreArray[0].national.tempClosed += 1;
-                dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
-                    ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
-                    : outletName;
-            }
-        });
-
-        // Add Squad360 data to national and branch-wise counts (reusing fetched data)
-        let squad360Active = 0;
-        let squad360Inactive = 0;
-        if (squad360Data.length > 0) {
-            squad360Data.forEach(screen => {
-                const branchCode = screen.branch;
-                // Only process if branch is in targetBranches
-                const isTargetBranch = branchCode && targetBranches.includes(branchCode);
-
-                if (screen.isActive === 'Active') {
-                    dataStoreArray[0].national.active += 1;
-                    squad360Active += 1;
-                    // Add to branch-wise count if branch is in targetBranches
-                    if (isTargetBranch && dataStoreArray[0][branchCode]) {
-                        dataStoreArray[0][branchCode].active += 1;
-                    }
-                } else {
-                    dataStoreArray[0].national.inactive += 1;
-                    squad360Inactive += 1;
-                    // Add to branch-wise count if branch is in targetBranches
-                    if (isTargetBranch && dataStoreArray[0][branchCode]) {
-                        dataStoreArray[0][branchCode].inactive += 1;
-                        const outletName = screen.name || screen.wdName || '';
-                        if (outletName) {
-                            dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
-                                ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
-                                : outletName;
-                        }
-                    }
-                }
-                dataStoreArray[0].national.total += 1;
-                // Add to branch-wise total if branch is in targetBranches
-                if (isTargetBranch && dataStoreArray[0][branchCode]) {
-                    dataStoreArray[0][branchCode].total += 1;
-                }
-            });
-            console.log(`SQUAD-360: Added ${squad360Data.length} devices (${squad360Active} Active / ${squad360Inactive} Inactive) to national and branch counts`);
+    // Loop for each branch
+    for (const branch of targetBranches) {
+        if (!dataStoreArray[0][branch]) {
+            console.log(`MPDU: ${branch} branch not found in the data.`);
+            continue;
         }
 
-        // Loop for each branch
-        for (const branch of targetBranches) {
-            if (!dataStoreArray[0][branch]) {
-                console.log(`MPDU: ${branch} branch not found in the data.`);
-                continue;
-            }
+        console.log("\n");
+        console.log(`Sending MPDU ${branch} Branch Messages...`);
+        let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0][branch].inActiveOutletList;
+        let tempClosedOutletListStr = isEmpty(dataStoreArray[0][branch].tempClosedOutletList) ? "No temporarily closed outlet list found" : dataStoreArray[0][branch].tempClosedOutletList;
 
-            console.log("\n");
-            console.log(`Sending MPDU ${branch} Branch Messages...`);
-            let inActiveOutletListStr = isEmpty(dataStoreArray[0][branch].inActiveOutletList) ? "No inactive outlet list found" : dataStoreArray[0][branch].inActiveOutletList;
-            let tempClosedOutletListStr = isEmpty(dataStoreArray[0][branch].tempClosedOutletList) ? "No temporarily closed outlet list found" : dataStoreArray[0][branch].tempClosedOutletList;
-
-            for (let key in eveningBranchNum) {
-                let phoneNum = `+91${eveningBranchNum[key]}`;
-                let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
-                console.log(`MPDU ${branch}: ${key} ---> ${res}`);
-                await delay(500);
-            }
-
-            // Send branch wise message to the POC {SCHE,WPUN}  
-            if (branch === "SCHE" || branch === "WPUN") {
-                for (const pocName in mpduBranchWisePOCNum[branch]) {
-                    let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                    let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
-                    console.log(`MPDU ${branch}: ${pocName} ---> ${res}`);
-                    await delay(500);
-                }
-            }
+        for (let key in eveningBranchNum) {
+            let phoneNum = `+91${eveningBranchNum[key]}`;
+            let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
+            console.log(`MPDU ${branch}: ${key} ---> ${res}`);
+            await delay(500);
         }
-    } else {
-        console.log("MPDU: NOT FIND DATA LENGTH OF DATA GET FROM API OR GOOGLE SHEETS");
+
+        // Send branch wise message to the POC {SCHE,WPUN}  
+        // if (branch === "SCHE" || branch === "WPUN") {
+        //     for (const pocName in mpduBranchWisePOCNum[branch]) {
+        //         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+        //         let res = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
+        //         console.log(`MPDU ${branch}: ${pocName} ---> ${res}`);
+        //         await delay(500);
+        //     }
+        // }
     }
 }
 
 // =================================================================================================
 // --- 43 INCH VERTICAL SCRIPT ---
 // =================================================================================================
-async function send43InchMorningMessage(dbData) {
+async function send43InchMorningMessage(dataStoreArray, uniqueBranchCodes) {
     console.log("\n--- Starting 43 Inch Vertical Morning Report ---");
-    if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && dbData.length > 0) {
-        let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
-        const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
-        uniqueBranchCodes.forEach(branch => {
-            dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
-        });
 
-        if (uniqueBranchCodes.length == 9) {
-            workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                const findDeviceByTechworksId = dbData.find(d => d.display_name == deviceIdElement['Techworks ID']);
-                const branchCode = deviceIdElement['Branch Code'];
-
-                if (findDeviceByTechworksId) {
-                    const onlineDevice = dbData.find(d => d.display_name == deviceIdElement['Techworks ID'] && d.display_count > 0);
-                    const outletName = deviceIdElement['Outlet Name'].trim();
-
-                    if (onlineDevice) {
-                        dataStoreArray[0][branchCode].active += 1;
-                        dataStoreArray[0].national.active += 1;
-                    } else {
-                        dataStoreArray[0][branchCode].inactive += 1;
-                        dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                        dataStoreArray[0].national.inactive += 1;
-                    }
-                    dataStoreArray[0][branchCode].total += 1;
-                    dataStoreArray[0].national.total += 1;
-                }
-            });
-
-            // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-            workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                const branchCode = deviceIdElement['Branch Code'];
-                const currentStatus = deviceIdElement['Current Status'];
-                const outletName = deviceIdElement['Outlet Name']?.trim();
-
-                if (currentStatus === 'Verified & Temp Closed' && outletName && dataStoreArray[0][branchCode]) {
-                    dataStoreArray[0][branchCode].tempClosed += 1;
-                    dataStoreArray[0].national.tempClosed += 1;
-                    dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
-                        ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
-                        : outletName;
-                }
-            });
-
-            console.log("Sending 43 Inch Vertical National Messages...");
-            for (let key in NationalPOCNum) {
-                let phoneNum = `+91${NationalPOCNum[key]}`;
-                let nationalMsgRes = await vertical43InchNationalMsg("national_temp_for_43vertical", phoneNum, dataStoreArray);
-                console.log(`43 Inch: ${key} ---> ${nationalMsgRes}`);
-                await delay(500);
-            }
-
-            await delay(5000);
-
-            console.log("Sending 43 Inch Vertical Branch Messages...");
-            for (const branch of uniqueBranchCodes) {
-                if (mpduBranchWisePOCNum[branch]) {
-                    const branchCounts = dataStoreArray[0][branch];
-                    for (const pocName in mpduBranchWisePOCNum[branch]) {
-                        let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                        let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-                        let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
-                        let branchMsgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
-                        console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
-                        await delay(500);
-                    }
-                }
-            }
-        } else {
-            console.log("43 Inch: BRANCH COUNT NOT MATCHED");
-        }
-    } else {
-        console.log("43 Inch: NOT FIND DATA LENGTH OF DATA GET FROM DB OR GOOGLE SHEETS");
-    }
-}
-
-async function send43InchEveningMessage(apiData) {
-    console.log("\n--- Starting 43 Inch Vertical Evening Report ---");
-
-    if (!workbookData['43 Inch Vertical'] || workbookData['43 Inch Vertical'].length === 0 || apiData.length === 0) {
-        console.log("43 Inch: No data found in API or Google Sheets");
+    if (!dataStoreArray || !dataStoreArray[0] || uniqueBranchCodes.length !== 9) {
+        console.log("43 Inch: BRANCH COUNT NOT MATCHED OR DATA NOT PROVIDED");
         return;
     }
 
-    const targetBranches = ["SBLR", "WPUN", "NDEL"];
-    let dataStoreArray = [{ "national": { active: 0, inactive: 0, tempClosed: 0, total: 0 } }];
+    console.log("Sending 43 Inch Vertical National Messages...");
+    for (let key in NationalPOCNum) {
+        let phoneNum = `+91${NationalPOCNum[key]}`;
+        let nationalMsgRes = await vertical43InchNationalMsg("national_temp_for_43vertical", phoneNum, dataStoreArray);
+        console.log(`43 Inch: ${key} ---> ${nationalMsgRes}`);
+        await delay(500);
+    }
 
-    // Initialize data for each target branch
-    targetBranches.forEach(branch => {
-        dataStoreArray[0][branch] = { active: 0, inactive: 0, tempClosed: 0, total: 0, inActiveOutletList: "", tempClosedOutletList: "" };
-    });
+    await delay(5000);
 
-    // Count active/inactive for each branch
-    workbookData['43 Inch Vertical'].forEach(device => {
-        const branchCode = device['Branch Code'];
-        if (targetBranches.includes(branchCode)) {
-            const deviceInApi = apiData.find(d => d.display == device['Techworks ID']);
-            if (deviceInApi) {
-                const onlineDevice = apiData.find(
-                    d => d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device['Techworks ID'] && d.loggedIn == 1
-                );
-                const outletName = device['Outlet Name'].trim();
-
-                if (onlineDevice) {
-                    dataStoreArray[0][branchCode].active += 1;
-                } else {
-                    dataStoreArray[0][branchCode].inactive += 1;
-                    dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}` : outletName;
-                }
+    console.log("Sending 43 Inch Vertical Branch Messages...");
+    for (const branch of uniqueBranchCodes) {
+        if (mpduBranchWisePOCNum[branch]) {
+            const branchCounts = dataStoreArray[0][branch];
+            for (const pocName in mpduBranchWisePOCNum[branch]) {
+                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;;
+                let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
+                let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                let branchMsgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
+                console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
+                await delay(500);
             }
         }
-    });
+    }
+}
 
-    // Populate tempClosedOutletList and count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-    workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-        const branchCode = deviceIdElement['Branch Code'];
-        const currentStatus = deviceIdElement['Current Status'];
-        const outletName = deviceIdElement['Outlet Name']?.trim();
+async function send43InchEveningMessage(dataStoreArray, targetBranches) {
+    console.log("\n--- Starting 43 Inch Vertical Evening Report ---");
 
-        if (currentStatus === 'Verified & Temp Closed' && outletName && targetBranches.includes(branchCode) && dataStoreArray[0][branchCode]) {
-            dataStoreArray[0][branchCode].tempClosed += 1;
-            dataStoreArray[0].national.tempClosed += 1;
-            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
-                ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}`
-                : outletName;
-        }
-    });
+    if (!dataStoreArray || !dataStoreArray[0] || !targetBranches || targetBranches.length === 0) {
+        console.log("43 Inch: DATA NOT PROVIDED");
+        return;
+    }
 
     // Send messages for each branch using single eveningBranchNum list
     for (const branch of targetBranches) {
+        if (!dataStoreArray[0][branch]) {
+            console.log(`43 Inch: ${branch} branch not found in the data.`);
+            continue;
+        }
+
         console.log("\n");
         console.log(`Sending 43 Inch ${branch} Branch Messages...`);
 
@@ -693,21 +830,20 @@ async function send43InchEveningMessage(apiData) {
 
         for (let key in eveningBranchNum) {
             let phoneNum = `+91${eveningBranchNum[key]}`;
-
             let msgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
             console.log(`43 Inch ${branch}: ${key} ---> ${msgRes}`);
             await delay(500);
         }
 
         // Send branch wise message to the POC {WPUN}  
-        if (branch === "WPUN") {
-            for (const pocName in mpduBranchWisePOCNum[branch]) {
-                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-                let msgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
-                console.log(`43 Inch ${branch}: ${pocName} ---> ${msgRes}`);
-                await delay(500);
-            }
-        }
+        // if (branch === "WPUN") {
+        //     for (const pocName in mpduBranchWisePOCNum[branch]) {
+        //         let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+        //         let msgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, dataStoreArray[0][branch], inActiveOutletListStr, tempClosedOutletListStr);
+        //         console.log(`43 Inch ${branch}: ${pocName} ---> ${msgRes}`);
+        //         await delay(500);
+        //     }
+        // }
     }
 }
 
@@ -734,7 +870,7 @@ async function startScript() {
     console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
 
     const currentHour = currentTime.hour();
-    if (currentHour >= 15) {
+    if (currentHour >= 16) {
         console.log(`\nIt's evening time, script run.`);
         console.log(`EVENING DATA GET DATE :- ${currentTime.format("YYYY-MM-DD")}`, "\n");
         try {
@@ -750,137 +886,120 @@ async function startScript() {
             const mpduBranches = ["SBLR", "WPUN", "SCHE", "NDEL"];
             const verticalBranches = ["SBLR", "WPUN", "NDEL"];
 
-            // Function to calculate active/inactive for any branch array
-            function getBranchStatus(sheetName, branches) {
-                let status = {};
-                branches.forEach(code => status[code] = { active: 0, inactive: 0 });
+            // ========== MPDU EVENING CALCULATIONS ==========
+            const mpduEveningDataStoreArray = calculateDeviceCounts('All Device', apiData, mpduBranches);
 
-                if (workbookData[sheetName] && workbookData[sheetName].length > 0 && apiData.length > 0) {
-                    workbookData[sheetName].forEach(device => {
-                        const branchCode = device["Branch Code"];
-                        if (branches.includes(branchCode)) {
-                            const deviceInApi = apiData.find(d => d.display == device["Techworks ID"]);
-                            if (deviceInApi) {
-                                const isOnline = apiData.find(d =>
-                                    d.display.replace(/\s*(\(new\)|\t)\s*/gi, '') == device["Techworks ID"] &&
-                                    d.loggedIn == 1
-                                );
-                                if (isOnline) status[branchCode].active++;
-                                else status[branchCode].inactive++;
-                            }
-                        }
-                    });
-                }
-                return status;
+            // Log Techworks API data counts for MPDU (Evening)
+            console.log("\n--- MPDU Techworks API Data Counts (Evening) ---");
+            console.log(`Techworks Active: ${mpduEveningDataStoreArray[0].national.active}, Inactive: ${mpduEveningDataStoreArray[0].national.inactive}, Total: ${mpduEveningDataStoreArray[0].national.total}`);
+
+            // Add Squad360 data
+            const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
+            const squad360Result = addSquad360Data(mpduEveningDataStoreArray, squad360Data, mpduBranches, uniqueBranchCodes);
+
+            if (squad360Result.squad360Skipped > 0) {
+                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not in target branches`);
+            }
+            console.log("\n--- MPDU Squad360 Data Counts (Evening) ---");
+            console.log(`Squad360 Active: ${squad360Result.squad360Active}, Inactive: ${squad360Result.squad360Inactive}, Total: ${squad360Data.length}`);
+            console.log(`MPDU Combined (Techworks + Squad360) - Active: ${mpduEveningDataStoreArray[0].national.active}, Inactive: ${mpduEveningDataStoreArray[0].national.inactive}, Total: ${mpduEveningDataStoreArray[0].national.total}`);
+
+            // Branch difference check
+            const mpduValidation = validateBranchTotals(mpduEveningDataStoreArray, mpduBranches, "MPDU EVENING");
+            if (mpduValidation.hasDifference) {
+                console.log("MPDU EVENING: BRANCH COUNT NOT MATCHED - STOPPING SCRIPT");
+                return;
             }
 
-            // Get status for MPDU and 43 Inch Vertical
-            const mpduStatus = getBranchStatus("All Device", mpduBranches);
-            const verticalStatus = getBranchStatus("43 Inch Vertical", verticalBranches);
+            // ========== 43 INCH VERTICAL EVENING CALCULATIONS ==========
+            // 43 Inch Vertical uses 'Verified & Working' status instead of 'Verified & Currently Installed'
+            const verticalEveningDataStoreArray = calculateDeviceCounts('43 Inch Vertical', apiData, verticalBranches, 'Verified & Working');
 
-            // Display demo messages
-            console.log("\n--- MPDU EVENING STATUS ---");
-            Object.entries(mpduStatus).forEach(([branch, counts]) => {
-                console.log(`${branch} : ${counts.active} (Active) / ${counts.inactive} (Inactive)`);
-            });
-
-            console.log("\n--- 43 INCH VERTICAL EVENING STATUS ---");
-            Object.entries(verticalStatus).forEach(([branch, counts]) => {
-                console.log(`${branch} : ${counts.active} (Active) / ${counts.inactive} (Inactive)`);
-            });
+            // Branch difference check
+            const verticalValidation = validateBranchTotals(verticalEveningDataStoreArray, verticalBranches, "43 INCH VERTICAL EVENING");
+            if (verticalValidation.hasDifference) {
+                console.log("43 INCH VERTICAL EVENING: BRANCH COUNT NOT MATCHED - STOPPING SCRIPT");
+                return;
+            }
 
             // Stop script if all zero
-            if (Object.values(mpduStatus).every(c => c.active === 0 && c.inactive === 0)) {
+            let mpduAllZeroEvening = mpduBranches.every(branch => {
+                const branchData = mpduEveningDataStoreArray[0][branch];
+                return !branchData || (branchData.active === 0 && branchData.inactive === 0);
+            });
+            if (mpduAllZeroEvening) {
                 console.log("All MPDU branches are 0 (Active) / 0 (Inactive). Stopping script.");
-                process.exit(0);
+                return;
             }
-            if (Object.values(verticalStatus).every(c => c.active === 0 && c.inactive === 0)) {
+
+            let verticalAllZeroEvening = verticalBranches.every(branch => {
+                const branchData = verticalEveningDataStoreArray[0][branch];
+                return !branchData || (branchData.active === 0 && branchData.inactive === 0);
+            });
+            if (verticalAllZeroEvening) {
                 console.log("All 43 Inch Vertical branches are 0 (Active) / 0 (Inactive). Stopping script.");
-                process.exit(0);
+                return;
+            }
+
+            // Generate Excel files and send email
+            console.log("\n--- Generating Excel Files and Sending Email ---");
+            const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
+            try {
+                const techworksFilePath = await generateTechworksExcel(apiData, dailyFilesFolder);
+                const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
+                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
+                console.log("Excel files generated and email sent successfully.\n");
+            } catch (error) {
+                console.error("Error generating Excel files or sending email:", error);
+                // Continue with message sending even if email fails
             }
 
             await delay(8000);
-            await sendMpduEveningMessage(apiData, squad360Data);
-            await send43InchEveningMessage(apiData);
+            await sendMpduEveningMessage(mpduEveningDataStoreArray, mpduBranches);
+            await send43InchEveningMessage(verticalEveningDataStoreArray, verticalBranches);
 
         } catch (error) {
             console.error('Error during evening data retrieval:', error);
         }
     } else {
         console.log(`\nIt's morning time, script run.`);
-        console.log(`MORNING DATA GET DATE :- ${previousDate.format("YYYY-MM-DD")}`, "\n");
+        console.log(`MORNING DATA GET DATE :- ${currentTime.format("YYYY-MM-DD")}`, "\n");
         try {
-            const dbResponse = await pool.query(`select * from display_data_table where custom_date = '${previousDate.format("YYYY-MM-DD")}'`);
-            console.log("Data From display_data_table ::", dbResponse.rows.length);
+            console.log('Getting initial tokens...');
+            await getAccessToken(1);
 
-            // Build and print MPDU message body summary
-            let mpduDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
+            console.log('Processing Server 1...');
+            const server1Results = await getApiData(1);
+            const apiData = server1Results.map(item => ({ ...item, sourceServer: 1 }));
+            console.log(`Total combined results from APIs: ${apiData.length}`);
+
+            // ========== MPDU MORNING CALCULATIONS ==========
+            const mpduDataStoreArray = calculateDeviceCounts('All Device', apiData);
+            const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
+
+            // Log Techworks API data counts for MPDU (Morning)
+            console.log("\n--- MPDU Techworks API Data Counts (Morning) ---");
+            console.log(`Techworks Active: ${mpduDataStoreArray[0].national.active}, Inactive: ${mpduDataStoreArray[0].national.inactive}, Total: ${mpduDataStoreArray[0].national.total}`);
+
+            // Add Squad360 data
+            const squad360Result = addSquad360Data(mpduDataStoreArray, squad360Data, null, uniqueBranchCodes);
+
+            if (squad360Result.squad360Skipped > 0) {
+                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not found in Google Sheets`);
+            }
+            console.log("\n--- MPDU Squad360 Data Counts (Morning) ---");
+            console.log(`Squad360 Active: ${squad360Result.squad360Active}, Inactive: ${squad360Result.squad360Inactive}, Total: ${squad360Data.length}`);
+            console.log(`\nMPDU Combined (Techworks + Squad360) - Active: ${mpduDataStoreArray[0].national.active}, Inactive: ${mpduDataStoreArray[0].national.inactive}, Total: ${mpduDataStoreArray[0].national.total}`);
+
+            // Branch difference check
+            const mpduValidation = validateBranchTotals(mpduDataStoreArray, uniqueBranchCodes, "MPDU MORNING");
+            if (mpduValidation.hasDifference) {
+                console.log("MPDU MORNING: BRANCH COUNT NOT MATCHED - STOPPING SCRIPT");
+                return;
+            }
+
             let mpduAllZero = false;
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && dbResponse.rows.length > 0) {
-                const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
-                uniqueBranchCodes.forEach(branch => {
-                    mpduDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
-                });
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const findDeviceByTechworksId = dbResponse.rows.find(d => d.display_name == deviceIdElement['Techworks ID']);
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (findDeviceByTechworksId) {
-                        const onlineDevice = dbResponse.rows.find(d => d.display_name.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && Number(d.display_count) > 0);
-                        if (onlineDevice) {
-                            mpduDataStoreArray[0][branchCode].active += 1;
-                            mpduDataStoreArray[0].national.active += 1;
-                        } else {
-                            mpduDataStoreArray[0][branchCode].inactive += 1;
-                            mpduDataStoreArray[0].national.inactive += 1;
-                        }
-                        mpduDataStoreArray[0][branchCode].total += 1;
-                        mpduDataStoreArray[0].national.total += 1;
-                    }
-                });
-
-                // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    const currentStatus = deviceIdElement['Current Status'];
-                    if (currentStatus === 'Verified & Temp Closed' && mpduDataStoreArray[0][branchCode]) {
-                        mpduDataStoreArray[0][branchCode].tempClosed += 1;
-                        mpduDataStoreArray[0].national.tempClosed += 1;
-                    }
-                });
-
-                // Add Squad360 data to preview (reusing fetched data)
-                let squad360PreviewActive = 0;
-                let squad360PreviewInactive = 0;
-                if (squad360Data.length > 0) {
-                    squad360Data.forEach(screen => {
-                        const branchCode = screen.branch;
-                        // Check if branch exists in mpduDataStoreArray, if not initialize it
-                        if (branchCode && !mpduDataStoreArray[0][branchCode]) {
-                            mpduDataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
-                        }
-
-                        if (screen.isActive === 'Active') {
-                            mpduDataStoreArray[0].national.active += 1;
-                            squad360PreviewActive += 1;
-                            // Add to branch-wise count if branch exists
-                            if (branchCode && mpduDataStoreArray[0][branchCode]) {
-                                mpduDataStoreArray[0][branchCode].active += 1;
-                            }
-                        } else {
-                            mpduDataStoreArray[0].national.inactive += 1;
-                            squad360PreviewInactive += 1;
-                            // Add to branch-wise count if branch exists
-                            if (branchCode && mpduDataStoreArray[0][branchCode]) {
-                                mpduDataStoreArray[0][branchCode].inactive += 1;
-                            }
-                        }
-                        mpduDataStoreArray[0].national.total += 1;
-                        // Add to branch-wise total if branch exists
-                        if (branchCode && mpduDataStoreArray[0][branchCode]) {
-                            mpduDataStoreArray[0][branchCode].total += 1;
-                        }
-                    });
-                }
+            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && apiData.length > 0) {
 
                 let mpduMessageBodyNational = `
 NATIONAL MPDU STATUS:
@@ -912,40 +1031,20 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
                 mpduAllZero = allBranchesZero(mpduDataStoreArray[0], uniqueBranchCodes);
             }
 
-            // Build and print 43 Inch Vertical message body summary
-            let verticalDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
-            let verticalAllZero = false;
-            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && dbResponse.rows.length > 0) {
-                const uniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
-                uniqueBranchCodes.forEach(branch => {
-                    verticalDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "" };
-                });
-                workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                    const findDeviceByTechworksId = dbResponse.rows.find(d => d.display_name == deviceIdElement['Techworks ID']);
-                    const branchCode = deviceIdElement['Branch Code'];
-                    if (findDeviceByTechworksId) {
-                        const onlineDevice = dbResponse.rows.find(d => d.display_name == deviceIdElement['Techworks ID'] && d.display_count > 0);
-                        if (onlineDevice) {
-                            verticalDataStoreArray[0][branchCode].active += 1;
-                            verticalDataStoreArray[0].national.active += 1;
-                        } else {
-                            verticalDataStoreArray[0][branchCode].inactive += 1;
-                            verticalDataStoreArray[0].national.inactive += 1;
-                        }
-                        verticalDataStoreArray[0][branchCode].total += 1;
-                        verticalDataStoreArray[0].national.total += 1;
-                    }
-                });
+            // ========== 43 INCH VERTICAL MORNING CALCULATIONS ==========
+            // 43 Inch Vertical uses 'Verified & Working' status instead of 'Verified & Currently Installed'
+            const verticalDataStoreArray = calculateDeviceCounts('43 Inch Vertical', apiData, null, 'Verified & Working');
+            const verticalUniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
 
-                // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-                workbookData['43 Inch Vertical'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    const currentStatus = deviceIdElement['Current Status'];
-                    if (currentStatus === 'Verified & Temp Closed' && verticalDataStoreArray[0][branchCode]) {
-                        verticalDataStoreArray[0][branchCode].tempClosed += 1;
-                        verticalDataStoreArray[0].national.tempClosed += 1;
-                    }
-                });
+            // Branch difference check
+            const verticalValidation = validateBranchTotals(verticalDataStoreArray, verticalUniqueBranchCodes, "43 INCH VERTICAL MORNING");
+            if (verticalValidation.hasDifference) {
+                console.log("43 INCH VERTICAL MORNING: BRANCH COUNT NOT MATCHED - STOPPING SCRIPT");
+                return;
+            }
+
+            let verticalAllZero = false;
+            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && apiData.length > 0) {
 
                 let verticalMessageBodyNational = `
 NATIONAL 43 VERTICAL STATUS
@@ -965,22 +1064,35 @@ NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataS
 SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataStoreArray[0].SHYD?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].SHYD?.tempClosed || 0} (TempClosed)
 `;
                 console.log("\n43 INCH VERTICAL SUMMARY PREVIEW:\n" + verticalMessageBodyNational);
-                verticalAllZero = allBranchesZero(verticalDataStoreArray[0], uniqueBranchCodes);
+                verticalAllZero = allBranchesZero(verticalDataStoreArray[0], verticalUniqueBranchCodes);
             }
 
             if (mpduAllZero) {
                 console.log("All MPDU branches are 0 (Active) / 0 (Inactive). Stopping script.");
-                process.exit(0);
+                return;
             }
             if (verticalAllZero) {
                 console.log("All 43 Inch Vertical branches are 0 (Active) / 0 (Inactive). Stopping script.");
-                process.exit(0);
+                return;
+            }
+
+            // Generate Excel files and send email
+            console.log("\n--- Generating Excel Files and Sending Email ---");
+            const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
+            try {
+                const techworksFilePath = await generateTechworksExcel(apiData, dailyFilesFolder);
+                const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
+                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
+                console.log("Excel files generated and email sent successfully.\n");
+            } catch (error) {
+                console.error("Error generating Excel files or sending email:", error);
+                // Continue with message sending even if email fails
             }
 
             await delay(8000);
 
-            await sendMpduMorningMessage(dbResponse.rows, squad360Data);
-            await send43InchMorningMessage(dbResponse.rows);
+            await sendMpduMorningMessage(mpduDataStoreArray, uniqueBranchCodes);
+            await send43InchMorningMessage(verticalDataStoreArray, verticalUniqueBranchCodes);
         } catch (error) {
             console.error('Error during morning data retrieval:', error);
         }

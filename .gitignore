@@ -129,6 +129,7 @@ dist
 
 # IBC Cubes reports folder
 src/all_combined_plus_ibc/ibc-backwall-daily-files
+src/mpdu_43vertical/mpdu-43vertical-daily-files
 src/ibc_backwall/ibc-backwall-daily-files
 src/squad_360/squad-360-daily-files
 
