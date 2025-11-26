@@ -870,7 +870,7 @@ async function startScript() {
     console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
 
     const currentHour = currentTime.hour();
-    if (currentHour >= 16) {
+    if (currentHour > 16) {
         console.log(`As of now evening messages paused !!`);
         return;
 
