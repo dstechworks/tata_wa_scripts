@@ -958,8 +958,10 @@ async function startScript() {
             }
 
             await delay(8000);
-            await sendMpduEveningMessage(mpduEveningDataStoreArray, mpduBranches);
-            await send43InchEveningMessage(verticalEveningDataStoreArray, verticalBranches);
+            await Promise.all([
+                sendMpduEveningMessage(mpduEveningDataStoreArray, mpduBranches),
+                send43InchEveningMessage(verticalEveningDataStoreArray, verticalBranches)
+            ]);
 
         } catch (error) {
             console.error('Error during evening data retrieval:', error);
@@ -1094,8 +1096,10 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
 
             await delay(8000);
 
-            await sendMpduMorningMessage(mpduDataStoreArray, uniqueBranchCodes);
-            await send43InchMorningMessage(verticalDataStoreArray, verticalUniqueBranchCodes);
+            await Promise.all([
+                sendMpduMorningMessage(mpduDataStoreArray, uniqueBranchCodes),
+                send43InchMorningMessage(verticalDataStoreArray, verticalUniqueBranchCodes)
+            ]);
         } catch (error) {
             console.error('Error during morning data retrieval:', error);
         }
