@@ -988,7 +988,7 @@ async function startScript() {
     console.log("43-VERTICAL BASE DATA SHEET ::", workbookData['43 Inch Vertical'] ? workbookData['43 Inch Vertical'].length : 0);
 
     const currentHour = currentTime.hour();
-    if (currentHour < 16) {
+    if (currentHour > 16) {
         console.log(`\nIt's evening time, script run.`);
         console.log(`EVENING DATA GET DATE :- ${currentTime.format("YYYY-MM-DD")}`, "\n");
 
