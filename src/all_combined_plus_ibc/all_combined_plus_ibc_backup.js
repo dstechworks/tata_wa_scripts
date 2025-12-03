@@ -14,8 +14,6 @@ const { google } = require('googleapis');
 const { Pool } = require('pg');
 const axios = require('axios');
 const path = require('path');
-const xlsx = require('xlsx');
-const fs = require('fs');
 
 // Logger Intialize
 const logger = require('./all_combined_plus_ibc_logger');
@@ -93,10 +91,10 @@ async function getDataFromGoogleSheets(sheetID, reference) {
         const result = rows.map(row => Object.fromEntries(headers.map((key, index) => [key, row[index]])));
 
         workbookData[sheetName] = result;
-        // if (reference == "CubesSheetCall") {
-        //   const folderPath = path.join(__dirname, 'ibc-backwall-daily-files');
-        //   let saveDataToExcelRes = await saveDataToExcel(result, folderPath);
-        // }
+        if (reference == "CubesSheetCall") {
+          const folderPath = path.join(__dirname, 'ibc-backwall-daily-files');
+          let saveDataToExcelRes = await saveDataToExcel(result, folderPath);
+        }
       }
     } catch (error) {
       console.error("Error fetching data for sheets:", error);
@@ -311,45 +309,11 @@ async function getSquad360Data() {
   }
 }
 
-// Function to get latest file from folder based on modification time (not filename)
-async function getLatestFileFromFolder(folderPath) { // ← now expects full path
-  try {
-    if (!fs.existsSync(folderPath)) {
-      console.error(`Folder does not exist: ${folderPath}`);
-      return [];
-    }
-
-    const files = fs.readdirSync(folderPath);
-    const excelFiles = files
-      .filter(file => file.endsWith('.xlsx') && !file.startsWith('~$'))
-      .map(file => path.join(folderPath, file));
-
-    if (excelFiles.length === 0) {
-      console.error(`No .xlsx files in: ${folderPath}`);
-      return [];
-    }
-
-    const latestFile = excelFiles.reduce((newest, current) => {
-      return fs.statSync(current).mtimeMs > fs.statSync(newest).mtimeMs ? current : newest;
-    });
-
-    console.log(`✅ Latest file: ${path.basename(latestFile)}`);
-
-    const workbook = xlsx.readFile(latestFile);
-    const sheetName = workbook.SheetNames[0];
-    return xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-  } catch (error) {
-    console.error('Error reading latest file:', error);
-    return [];
-  }
-}
-
 async function sendMessage() {
   let getBaseSheetData = await getDataFromGoogleSheets(baseSpreadsheetId, 'BaseSheetCall');
   let getCubesSheetData = await getDataFromGoogleSheets(ibcCubesSpreadsheetId, 'CubesSheetCall');
   let baseDataSheet = workbookData["Backwall"];
-  // Get latest file from ibc-backwall-daily-files folder based on modification time
-  let reportDataSheet = await getLatestFileFromFolder(path.join(__dirname, 'ibc-backwall-daily-files'));
+  let reportDataSheet = workbookData["ibc"];
 
   // All Zone Status
   let ibcZoneStatus = {
@@ -461,25 +425,25 @@ async function sendMessage() {
     let AEDevice = {}
     let AllCombinedSystemsPOCNum = {
       "Hitesh": "8700685675",
-      // "Dhruv": "8826909378",
-      // "Sumit": "8920131195",
-      // "Pratek": "9818429501",
-      // "rusum": "9266903108",
-      // "Anirban Sen": "9831055203"
+      "Dhruv": "8826909378",
+      "Sumit": "8920131195",
+      "Pratek": "9818429501",
+      "rusum": "9266903108",
+      "Anirban Sen": "9831055203"
     }
     let NationalPOCNum = {
       "Hitesh": "8700685675",
-      // "Dhruv": "8826909378",
-      // "Sumit": "8920131195",
-      // "Pratek": "9818429501",
-      // "rusum": "9266903108",
-      // "Anirban Sen": "9831055203",
-      // "Nitsh Chabbra": "9712933048",
-      // "Nalin Kaushik": "9831055468",
-      // "Gaurav Pundlik": "9831149422",
-      // "Rishab Agarwal": "9734469759",
-      // "Milan Anandan": "9903955267",
-      // "Priyank Maheshwari": "9893585458"
+      "Dhruv": "8826909378",
+      "Sumit": "8920131195",
+      "Pratek": "9818429501",
+      "rusum": "9266903108",
+      "Anirban Sen": "9831055203",
+      "Nitsh Chabbra": "9712933048",
+      "Nalin Kaushik": "9831055468",
+      "Gaurav Pundlik": "9831149422",
+      "Rishab Agarwal": "9734469759",
+      "Milan Anandan": "9903955267",
+      "Priyank Maheshwari": "9893585458"
     }
     let IBC_KOLKATA_POC_NUMBER = {
       "Hitesh": "8700685675",
@@ -792,7 +756,7 @@ async function sendMessage() {
       await delay(1000);
     }
 
-return;
+
 
     /////////------------------------------- Send Combined Single Messages National Message ----------------------------/////////
     let combinedSingleData = {
