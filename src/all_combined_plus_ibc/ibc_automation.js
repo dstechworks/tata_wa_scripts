@@ -274,6 +274,6 @@ cron.schedule('0 11,17 * * 1-6', runYourScript, {
     timezone: 'Asia/Kolkata'
 });
 
-console.log('⏰ IBC Report scheduled: Mon–Sat at 11:00 AM / 05:00 PM. Keep this process running.');
+console.log(`Script started at ${moment().tz('Asia/Kolkata').format("llll")}`);
 
 // runYourScript();
