@@ -49,7 +49,7 @@ function runYourScript() {
         const page = await context.newPage();
 
         // ✅ Fix: Remove trailing spaces in URL
-        await page.goto('https://iads.ibccube.in/SSRT/app    ');
+        await page.goto('https://iads.ibccube.in/SSRT/app');
 
         // === LOGIN ===
         await page.waitForSelector('#account_id');
@@ -84,6 +84,8 @@ function runYourScript() {
 
         // === FILTERS ===
         await delay(2000);
+
+        // Existing filters - keep unchanged
         await page.fill('#parrsit_status', 'active');
         await page.dispatchEvent('#parrsit_status', 'blur');
         await delay(500);
@@ -93,6 +95,71 @@ function runYourScript() {
         await page.dispatchEvent('#parrsit_device', 'blur');
         await delay(500);
         console.log('✅ Device filter applied');
+
+        // === ADDITIONAL FILTER FIELDS ===
+        // Text input fields - fill with empty string to clear any existing values
+        const textFields = [
+            'parrsit_site',
+            'parrsit_code',
+            'parrsit_reference code',
+            'parrsit_wd code',
+            'parrsit_landmark',
+            'parrsit_district',
+            'parrsit_branch',
+            'parrsit_channel',
+            'parrsit_ra color',
+            'parrsit_orientation',
+            'parrsit_ra type',
+            'parrsit_media group',
+            'parrsit_contact name',
+            'parrsit_administrator name',
+            'parrsit_category',
+            'parrsit_type',
+            'parrsit_city / town',
+            'parrsit_address',
+            'parrsit_device status',
+            'parrsit_site status',
+            'parrsit_support status',
+            'parrsit_work type',
+            'parrsit_work status',
+            'parrsit_sort key',
+            'parrsit_work update',
+            'parrsit_site unique id',
+            'parrsit_keywords',
+            'parrsit_location search'
+        ];
+
+        for (const fieldId of textFields) {
+            try {
+                // Handle IDs with spaces using attribute selector
+                const selector = fieldId.includes(' ') || fieldId.includes('/')
+                    ? `[id="${fieldId}"]`
+                    : `#${fieldId}`;
+                await page.fill(selector, '');
+                await page.dispatchEvent(selector, 'blur');
+                await delay(200);
+            } catch (e) {
+                console.log(`⚠️ Could not fill field: ${fieldId}`);
+            }
+        }
+        console.log('✅ All text filter fields cleared');
+
+        // Dropdown fields
+        try {
+            await page.selectOption('#parrsit_select', 'all');
+            await delay(200);
+            console.log('✅ Select set to "all"');
+        } catch (e) {
+            console.log('⚠️ Could not set parrsit_select');
+        }
+
+        try {
+            await page.selectOption('[id="parrsit_date search on"]', 'none');
+            await delay(200);
+            console.log('✅ Date search on set to "none"');
+        } catch (e) {
+            console.log('⚠️ Could not set parrsit_date search on');
+        }
 
         // === DATE FROM (set to custom time) ===
         await page.click('#parrsit_from');
