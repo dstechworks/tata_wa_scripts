@@ -268,8 +268,8 @@ function runYourScript() {
     })();
 }
 
-// ✅ Schedule Mon-Sat at 11:00 AM and 5:00 PM Kolkata time
-cron.schedule('0 11,17 * * 1-6', runYourScript, {
+// ✅ Schedule Mon-Sat at 10:30 AM and 5:00 PM Kolkata time
+cron.schedule('30 10,17 * * 1-6', runYourScript, {
     scheduled: true,
     timezone: 'Asia/Kolkata'
 });
