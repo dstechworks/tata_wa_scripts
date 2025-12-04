@@ -268,12 +268,21 @@ function runYourScript() {
     })();
 }
 
-// ✅ Schedule Mon-Sat at 10:30 AM and 5:00 PM Kolkata time
-cron.schedule('30 10,17 * * 1-6', runYourScript, {
-    scheduled: true,
-    timezone: 'Asia/Kolkata'
-});
+const TIMEZONE = 'Asia/Kolkata';
 
-console.log(`Script started at ${moment().tz('Asia/Kolkata').format("llll")}`);
+// ✅ Mon–Sat @ 10:30 AM: Run IBC automation
+cron.schedule('30 10 * * 1-6', () => {
+    console.log(`⏰ Executing IBC automation at Kolkata time: ${moment().tz(TIMEZONE).format("llll")}`);
+    runYourScript();
+}, { timezone: TIMEZONE });
+
+// ✅ Mon–Sat @ 5:00 PM: Run IBC automation
+cron.schedule('0 17 * * 1-6', () => {
+    console.log(`⏰ Executing IBC automation at Kolkata time: ${moment().tz(TIMEZONE).format("llll")}`);
+    runYourScript();
+}, { timezone: TIMEZONE });
+
+console.log(`✅ IBC automation cron jobs started at ${moment().tz(TIMEZONE).format('YYYY-MM-DD hh:mm:ss A')}`);
+console.log(`📅 Scheduled to run at 10:30 AM and 5:00 PM (Kolkata time) on Mon-Sat`);
 
 // runYourScript();
