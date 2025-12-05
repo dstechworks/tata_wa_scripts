@@ -838,20 +838,20 @@ async function sendMpduMorningMessage(dataStoreArray, uniqueBranchCodes) {
 
     // await delay(5000);
 
-    // console.log("Sending MPDU Branch Messages...");
-    // for (const branch of uniqueBranchCodes) {
-    //     if (mpduBranchWisePOCNum[branch]) {
-    //         const branchCounts = dataStoreArray[0][branch];
-    //         for (const pocName in mpduBranchWisePOCNum[branch]) {
-    //             let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
-    //             let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-    //             let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
-    //             let branchMsgRes = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
-    //             console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
-    //             await delay(500);
-    //         }
-    //     }
-    // }
+    console.log("Sending MPDU Branch Messages...");
+    for (const branch of uniqueBranchCodes) {
+        if (mpduBranchWisePOCNum[branch]) {
+            const branchCounts = dataStoreArray[0][branch];
+            for (const pocName in mpduBranchWisePOCNum[branch]) {
+                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;
+                let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
+                let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                let branchMsgRes = await mpduBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `MPDU - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
+                console.log(`MPDU Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
+                await delay(500);
+            }
+        }
+    }
 }
 
 async function sendMpduEveningMessage(dataStoreArray, targetBranches) {
@@ -914,20 +914,20 @@ async function send43InchMorningMessage(dataStoreArray, uniqueBranchCodes) {
 
     // await delay(5000);
 
-    // console.log("Sending 43 Inch Vertical Branch Messages...");
-    // for (const branch of uniqueBranchCodes) {
-    //     if (mpduBranchWisePOCNum[branch]) {
-    //         const branchCounts = dataStoreArray[0][branch];
-    //         for (const pocName in mpduBranchWisePOCNum[branch]) {
-    //             let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;;
-    //             let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
-    //             let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
-    //             let branchMsgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
-    //             console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
-    //             await delay(500);
-    //         }
-    //     }
-    // }
+    console.log("Sending 43 Inch Vertical Branch Messages...");
+    for (const branch of uniqueBranchCodes) {
+        if (mpduBranchWisePOCNum[branch]) {
+            const branchCounts = dataStoreArray[0][branch];
+            for (const pocName in mpduBranchWisePOCNum[branch]) {
+                let phoneNum = `+91${mpduBranchWisePOCNum[branch][pocName]}`;;
+                let inActiveOutletListStr = isEmpty(branchCounts.inActiveOutletList) ? "No inactive outlet list found" : branchCounts.inActiveOutletList;
+                let tempClosedOutletListStr = isEmpty(branchCounts.tempClosedOutletList) ? "No temporarily closed outlet list found" : branchCounts.tempClosedOutletList;
+                let branchMsgRes = await vertical43InchBranchMsg("mpdu_43vertical_branch_temp_2", phoneNum, `43 VERTICAL - ${branch}`, branchCounts, inActiveOutletListStr, tempClosedOutletListStr);
+                console.log(`43 Inch Branch: ${pocName} - ${branch} ---> ${branchMsgRes}`);
+                await delay(500);
+            }
+        }
+    }
 }
 
 async function send43InchEveningMessage(dataStoreArray, targetBranches) {
