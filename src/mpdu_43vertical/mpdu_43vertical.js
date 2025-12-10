@@ -49,9 +49,9 @@ const tokenStorage = {
 };
 let NationalPOCNum = {
     "Hitesh": "8700685675",
-    // "Dhruv": "8826909378",
-    // "Sandip": "9319798915",
-    // "Rusum": "9266903108",
+    "Dhruv": "8826909378",
+    "Sandip": "9319798915",
+    "Rusum": "9266903108",
     // "Mark": "7871419732",
     "Rohan": "9888311338"
 }
@@ -408,15 +408,139 @@ async function generateTechworksExcel(apiData, folderPath) {
         const fileName = `techworksMpdu_${formattedDate}.xlsx`;
         const filePath = path.join(folderPath, fileName);
 
-        // Prepare data for Excel - flatten the API data structure
-        const excelData = apiData.map(item => ({
-            'Current Time': moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A'),
-            'Display': item.display || '',
-            'Logged In': item.loggedIn || 0,
-            'Source Server': item.sourceServer || '',
-            'ID': item.id || '',
-            'Status': item.loggedIn === 1 ? 'Active' : 'Inactive'
-        }));
+        // Create a lookup map from workbookData to match Techworks ID with all device fields
+        // Only include devices with 'Verified & Currently Installed' status (same as used in calculateDeviceCounts)
+        const techworksIdToDeviceMap = {};
+        if (workbookData['All Device'] && workbookData['All Device'].length > 0) {
+            workbookData['All Device'].forEach(device => {
+                const techworksId = device['Techworks ID'];
+                const branchCode = device['Branch Code'];
+                const currentStatus = device['Current Status'];
+
+                // Only include devices with 'Verified & Currently Installed' status (same filter as in calculateDeviceCounts)
+                if (techworksId && branchCode && currentStatus === 'Verified & Currently Installed') {
+                    techworksIdToDeviceMap[techworksId] = {
+                        branchCode: branchCode,
+                        outletName: device['Outlet Name'] || '',
+                        simCardProvider: device['Sim Card Provider'] || '',
+                        simCardNumber: device['SIM Card Number'] || '',
+                        type: device['Type'] || '',
+                        screenSize: device['Screen Size'] || '',
+                        city: device['City'] || '',
+                        language: device['Langauge'] || device['Language'] || '',
+                        outletAddress: device['Outlet Address'] || '',
+                        outletContactNumber: device['Outlet Contact Number'] || '',
+                        branchPOC: device['Branch POC'] || '',
+                        pocNum: device['POC Num'] || '',
+                        aeName: device['AE Name'] || '',
+                        dateOfInspection: device['Date of Inspection'] || '',
+                        currentStatus: currentStatus || '',
+                        remarks: device['Remarks'] || ''
+                    };
+                }
+            });
+        }
+
+        // Filter API data to only include devices that are in workbookData with correct status
+        // This ensures Excel only contains devices that are being counted in logs
+        const filteredApiData = apiData.filter(item => {
+            const display = item.display || '';
+            const cleanedDisplay = display.replace(/\s*(\(new\)|\t)\s*/gi, '');
+
+            // Check if device exists in workbookData with correct status
+            return techworksIdToDeviceMap[display] || techworksIdToDeviceMap[cleanedDisplay] ||
+                (workbookData['All Device'] && workbookData['All Device'].some(device =>
+                    (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
+                    device['Current Status'] === 'Verified & Currently Installed'
+                ));
+        });
+
+        // Prepare data for Excel - only include filtered devices
+        const excelData = filteredApiData.map(item => {
+            // Find device data by matching display with Techworks ID
+            let deviceData = null;
+            const display = item.display || '';
+            const cleanedDisplay = display.replace(/\s*(\(new\)|\t)\s*/gi, '');
+
+            // Try exact match first
+            if (techworksIdToDeviceMap[display]) {
+                deviceData = techworksIdToDeviceMap[display];
+            }
+            // Try cleaned display match
+            else if (techworksIdToDeviceMap[cleanedDisplay]) {
+                deviceData = techworksIdToDeviceMap[cleanedDisplay];
+            }
+            // Try to find by iterating through workbookData for matches
+            else if (workbookData['All Device'] && workbookData['All Device'].length > 0) {
+                const matchedDevice = workbookData['All Device'].find(device =>
+                    (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
+                    device['Current Status'] === 'Verified & Currently Installed'
+                );
+                if (matchedDevice) {
+                    deviceData = {
+                        branchCode: matchedDevice['Branch Code'] || '',
+                        outletName: matchedDevice['Outlet Name'] || '',
+                        simCardProvider: matchedDevice['Sim Card Provider'] || '',
+                        simCardNumber: matchedDevice['SIM Card Number'] || '',
+                        type: matchedDevice['Type'] || '',
+                        screenSize: matchedDevice['Screen Size'] || '',
+                        city: matchedDevice['City'] || '',
+                        language: matchedDevice['Langauge'] || matchedDevice['Language'] || '',
+                        outletAddress: matchedDevice['Outlet Address'] || '',
+                        outletContactNumber: matchedDevice['Outlet Contact Number'] || '',
+                        branchPOC: matchedDevice['Branch POC'] || '',
+                        pocNum: matchedDevice['POC Num'] || '',
+                        aeName: matchedDevice['AE Name'] || '',
+                        dateOfInspection: matchedDevice['Date of Inspection'] || '',
+                        currentStatus: matchedDevice['Current Status'] || '',
+                        remarks: matchedDevice['Remarks'] || ''
+                    };
+                }
+            }
+
+            // Use deviceData if found, otherwise use defaults
+            const branchCode = deviceData?.branchCode || '';
+            const outletName = deviceData?.outletName || '';
+            const simCardProvider = deviceData?.simCardProvider || '';
+            const simCardNumber = deviceData?.simCardNumber || '';
+            const type = deviceData?.type || '';
+            const screenSize = deviceData?.screenSize || '';
+            const city = deviceData?.city || '';
+            const language = deviceData?.language || '';
+            const outletAddress = deviceData?.outletAddress || '';
+            const outletContactNumber = deviceData?.outletContactNumber || '';
+            const branchPOC = deviceData?.branchPOC || '';
+            const pocNum = deviceData?.pocNum || '';
+            const aeName = deviceData?.aeName || '';
+            const dateOfInspection = deviceData?.dateOfInspection || '';
+            const currentStatus = deviceData?.currentStatus || '';
+            const remarks = deviceData?.remarks || '';
+
+            return {
+                'Current Time': moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A'),
+                'Techworks ID': display,
+                'Sim Card Provider': simCardProvider || 'N/A',
+                'SIM Card Number': simCardNumber || 'N/A',
+                'Type': type || 'N/A',
+                'Screen Size': screenSize || 'N/A',
+                'City': city || 'N/A',
+                'Language': language || 'N/A',
+                'Outlet Name': outletName || 'N/A',
+                'Outlet Address': outletAddress || 'N/A',
+                'Outlet Contact Number': outletContactNumber || 'N/A',
+                'Branch POC': branchPOC || 'N/A',
+                'POC Num': pocNum || 'N/A',
+                'AE Name': aeName || 'N/A',
+                'Branch Code': branchCode || 'N/A',
+                'Date of Inspection': dateOfInspection || 'N/A',
+                'Current Status': currentStatus || 'N/A',
+                'Remarks': remarks || 'N/A',
+                'Logged In': item.loggedIn || 0,
+                'Source Server': item.sourceServer || '',
+                'ID': item.id || '',
+                'Status': item.loggedIn === 1 ? 'Active' : 'Inactive'
+            };
+        });
 
         const ws = xlsx.utils.json_to_sheet(excelData);
         const wb = xlsx.utils.book_new();
@@ -424,6 +548,7 @@ async function generateTechworksExcel(apiData, folderPath) {
         xlsx.writeFile(wb, filePath);
 
         console.log(`\nTechworks Excel file saved: ${fileName}`);
+        console.log(`Total devices in API: ${apiData.length}, Devices included in Excel (matching workbookData with 'Verified & Currently Installed' status): ${excelData.length}`);
         return filePath;
     } catch (error) {
         console.error("Error generating Techworks Excel file:", error);
@@ -485,12 +610,27 @@ async function generateSquad360Excel(squad360Data, folderPath) {
 }
 
 // Function to send email with Excel attachments
-async function sendEmailWithAttachments(squad360FilePath) {
+async function sendEmailWithAttachments(techworksFilePath, squad360FilePath) {
     try {
         // Create transporter
         const transporter = nodemailer.createTransport(emailConfig);
 
         const formattedDate = moment().tz('Asia/Kolkata').format('DD-MMM-YYYY hh:mm A');
+
+        // Prepare attachments array
+        const attachments = [];
+        if (techworksFilePath) {
+            attachments.push({
+                filename: path.basename(techworksFilePath),
+                path: techworksFilePath
+            });
+        }
+        if (squad360FilePath) {
+            attachments.push({
+                filename: path.basename(squad360FilePath),
+                path: squad360FilePath
+            });
+        }
 
         // Email content
         const mailOptions = {
@@ -498,7 +638,7 @@ async function sendEmailWithAttachments(squad360FilePath) {
             // to: 'hitesh.kumar@techworks.co.in',
             to: 'rohanwork2002@gmail.com',
             cc: 'dhruv@techworks.co.in, rusum@techworks.co.in, sandip@techworks.co.in, hitesh.kumar@techworks.co.in',
-            subject: `MPDU Squad360 Online/Offline Whatsapp Report - ${formattedDate}`,
+            subject: `MPDU Techworks & Squad360 Online/Offline Whatsapp Report - ${formattedDate}`,
             html: `<h6>Please find the attachment.</h6>
             <p>&nbsp;</p>
             <table style="width:450px; font-size: 10pt; font-family: Verdana, sans-serif; background: transparent !important;"
@@ -588,12 +728,7 @@ async function sendEmailWithAttachments(squad360FilePath) {
                     </tr>
                 </tbody>
             </table>`,
-            attachments: [
-                {
-                    filename: path.basename(squad360FilePath),
-                    path: squad360FilePath
-                }
-            ]
+            attachments: attachments
         };
 
         // Send email
@@ -836,7 +971,7 @@ async function sendMpduMorningMessage(dataStoreArray, uniqueBranchCodes) {
         await delay(500);
     }
 
-    // await delay(5000);
+    await delay(5000);
 
     console.log("Sending MPDU Branch Messages...");
     for (const branch of uniqueBranchCodes) {
@@ -912,7 +1047,7 @@ async function send43InchMorningMessage(dataStoreArray, uniqueBranchCodes) {
         await delay(500);
     }
 
-    // await delay(5000);
+    await delay(5000);
 
     console.log("Sending 43 Inch Vertical Branch Messages...");
     for (const branch of uniqueBranchCodes) {
@@ -1023,6 +1158,37 @@ async function startScript() {
                 return;
             }
 
+            // Log MPDU summary preview for evening
+            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && mpduData.length > 0) {
+                let mpduMessageBodyNational = `
+NATIONAL MPDU STATUS:
+
+Total : ${mpduDataStoreArray[0].national.active} (Active) / ${mpduDataStoreArray[0].national.inactive} (InActive) / ${mpduDataStoreArray[0].national.tempClosed} (TempClosed)
+WBHO : ${mpduDataStoreArray[0].WBHO?.active || 0} (Active) / ${mpduDataStoreArray[0].WBHO?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WBHO?.tempClosed || 0} (TempClosed)
+WNAG : ${mpduDataStoreArray[0].WNAG?.active || 0} (Active) / ${mpduDataStoreArray[0].WNAG?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WNAG?.tempClosed || 0} (TempClosed)
+WAHM : ${mpduDataStoreArray[0].WAHM?.active || 0} (Active) / ${mpduDataStoreArray[0].WAHM?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WAHM?.tempClosed || 0} (TempClosed)
+EVIZ : ${mpduDataStoreArray[0].EVIZ?.active || 0} (Active) / ${mpduDataStoreArray[0].EVIZ?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EVIZ?.tempClosed || 0} (TempClosed)
+SHYD : ${mpduDataStoreArray[0].SHYD?.active || 0} (Active) / ${mpduDataStoreArray[0].SHYD?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SHYD?.tempClosed || 0} (TempClosed)
+SBLR : ${mpduDataStoreArray[0].SBLR?.active || 0} (Active) / ${mpduDataStoreArray[0].SBLR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SBLR?.tempClosed || 0} (TempClosed)
+SCHE : ${mpduDataStoreArray[0].SCHE?.active || 0} (Active) / ${mpduDataStoreArray[0].SCHE?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SCHE?.tempClosed || 0} (TempClosed)
+NJPR : ${mpduDataStoreArray[0].NJPR?.active || 0} (Active) / ${mpduDataStoreArray[0].NJPR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NJPR?.tempClosed || 0} (TempClosed)
+WMUM : ${mpduDataStoreArray[0].WMUM?.active || 0} (Active) / ${mpduDataStoreArray[0].WMUM?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WMUM?.tempClosed || 0} (TempClosed)
+WPUN : ${mpduDataStoreArray[0].WPUN?.active || 0} (Active) / ${mpduDataStoreArray[0].WPUN?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].WPUN?.tempClosed || 0} (TempClosed)
+NLUC : ${mpduDataStoreArray[0].NLUC?.active || 0} (Active) / ${mpduDataStoreArray[0].NLUC?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NLUC?.tempClosed || 0} (TempClosed)
+NEUP : ${mpduDataStoreArray[0].NEUP?.active || 0} (Active) / ${mpduDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+EORI : ${mpduDataStoreArray[0].EORI?.active || 0} (Active) / ${mpduDataStoreArray[0].EORI?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EORI?.tempClosed || 0} (TempClosed)
+ECAL : ${mpduDataStoreArray[0].ECAL?.active || 0} (Active) / ${mpduDataStoreArray[0].ECAL?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].ECAL?.tempClosed || 0} (TempClosed)
+EGAU : ${mpduDataStoreArray[0].EGAU?.active || 0} (Active) / ${mpduDataStoreArray[0].EGAU?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].EGAU?.tempClosed || 0} (TempClosed)
+NSAH : ${mpduDataStoreArray[0].NSAH?.active || 0} (Active) / ${mpduDataStoreArray[0].NSAH?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NSAH?.tempClosed || 0} (TempClosed)
+NCHA : ${mpduDataStoreArray[0].NCHA?.active || 0} (Active) / ${mpduDataStoreArray[0].NCHA?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NCHA?.tempClosed || 0} (TempClosed)
+NDEL : ${mpduDataStoreArray[0].NDEL?.active || 0} (Active) / ${mpduDataStoreArray[0].NDEL?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].NDEL?.tempClosed || 0} (TempClosed)
+SKAR : ${mpduDataStoreArray[0].SKAR?.active || 0} (Active) / ${mpduDataStoreArray[0].SKAR?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SKAR?.tempClosed || 0} (TempClosed)
+SCOI : ${mpduDataStoreArray[0].SCOI?.active || 0} (Active) / ${mpduDataStoreArray[0].SCOI?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SCOI?.tempClosed || 0} (TempClosed)
+SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArray[0].SERN?.inactive || 0} (Inactive) / ${mpduDataStoreArray[0].SERN?.tempClosed || 0} (TempClosed)
+`;
+                console.log("\nMPDU SUMMARY PREVIEW (EVENING):\n" + mpduMessageBodyNational);
+            }
+
             // ========== 43 INCH VERTICAL EVENING CALCULATIONS ==========
             // 43 Inch Vertical uses 'Verified & Working' status instead of 'Verified & Currently Installed'
             const verticalDataStoreArray = calculateDeviceCounts('43 Inch Vertical', mpduData, null, 'Verified & Working');
@@ -1035,13 +1201,36 @@ async function startScript() {
                 return;
             }
 
+            // Log 43 Inch Vertical summary preview for evening
+            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && mpduData.length > 0) {
+                let verticalMessageBodyNational = `
+NATIONAL 43 VERTICAL STATUS
+NATIONAL WISE
+Total : ${verticalDataStoreArray[0].national.active} (Active) / ${verticalDataStoreArray[0].national.inactive} (Inactive) / ${verticalDataStoreArray[0].national.tempClosed} (TempClosed)
+
+BRANCH WISE
+WMUM : ${verticalDataStoreArray[0].WMUM?.active || 0} (Active) / ${verticalDataStoreArray[0].WMUM?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].WMUM?.tempClosed || 0} (TempClosed)
+ECAL : ${verticalDataStoreArray[0].ECAL?.active || 0} (Active) / ${verticalDataStoreArray[0].ECAL?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].ECAL?.tempClosed || 0} (TempClosed)
+NDEL : ${verticalDataStoreArray[0].NDEL?.active || 0} (Active) / ${verticalDataStoreArray[0].NDEL?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NDEL?.tempClosed || 0} (TempClosed)
+NCHA : ${verticalDataStoreArray[0].NCHA?.active || 0} (Active) / ${verticalDataStoreArray[0].NCHA?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NCHA?.tempClosed || 0} (TempClosed)
+NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+WPUN : ${verticalDataStoreArray[0].WPUN?.active || 0} (Active) / ${verticalDataStoreArray[0].WPUN?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].WPUN?.tempClosed || 0} (TempClosed)
+NJPR : ${verticalDataStoreArray[0].NJPR?.active || 0} (Active) / ${verticalDataStoreArray[0].NJPR?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NJPR?.tempClosed || 0} (TempClosed)
+SBLR : ${verticalDataStoreArray[0].SBLR?.active || 0} (Active) / ${verticalDataStoreArray[0].SBLR?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].SBLR?.tempClosed || 0} (TempClosed)
+NEUP : ${verticalDataStoreArray[0].NEUP?.active || 0} (Active) / ${verticalDataStoreArray[0].NEUP?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].NEUP?.tempClosed || 0} (TempClosed)
+SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataStoreArray[0].SHYD?.inactive || 0} (Inactive) / ${verticalDataStoreArray[0].SHYD?.tempClosed || 0} (TempClosed)
+`;
+                console.log("\n43 INCH VERTICAL SUMMARY PREVIEW (EVENING):\n" + verticalMessageBodyNational);
+            }
 
             // Generate Excel files and send email
             console.log("\n--- Generating Excel Files and Sending Email (Evening) ---");
             const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
             try {
+                const techworksFilePath = await generateTechworksExcel(mpduData, dailyFilesFolder);
                 const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
-                await sendEmailWithAttachments(squad360FilePath);
+                console.log(`Excel files generated successfully`);
+                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
                 console.log("Excel files generated and email sent successfully.\n");
             } catch (error) {
                 console.error("Error generating Excel files or sending email:", error);
@@ -1237,15 +1426,24 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
             console.log("\n--- Generating Excel Files and Sending Email (Morning) ---");
             const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
             try {
+                // Transform database data to match API format for Techworks Excel
+                const transformedMpduDataForExcel = mpduData.map(row => ({
+                    display: row.display_name,
+                    loggedIn: Number(row.display_count) > 0 ? 1 : 0,
+                    id: row.id || '',
+                    sourceServer: 'database'
+                }));
+                const techworksFilePath = await generateTechworksExcel(transformedMpduDataForExcel, dailyFilesFolder);
                 const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
-                await sendEmailWithAttachments(squad360FilePath);
+                console.log(`Excel files generated successfully`);
+                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
                 console.log("Excel files generated and email sent successfully.\n");
             } catch (error) {
                 console.error("Error generating Excel files or sending email:", error);
                 // Continue with message sending even if email fails
             }
 
-            await delay(8000);
+            await delay(10000);
 
             await Promise.all([
                 sendMpduMorningMessage(mpduDataStoreArray, uniqueBranchCodes),
