@@ -35,6 +35,58 @@ const techworksTabSpreadsheetId = "1bu-l2ds0tO51IHxAMw13HPQFQKegLBVWPXV2fTmRI9I"
 let workbookData = {};
 let isMessageSent = true;
 
+// ============================================================================
+// DEVICE FILTERING CONFIGURATION
+// ============================================================================
+// Set to false to disable device filtering (single line change)
+const ENABLE_DEVICE_FILTERING = true;
+
+// Device IDs to exclude from all processing (user-provided list)
+const EXCLUDED_DEVICE_IDS = new Set([
+  "BI0207",
+  "BI0263",
+  "BI0461",
+  "BI0473",
+  "BI0767",
+  "BI0952",
+  "BI0989",
+  "BI1339",
+  "BI1346",
+  "BI1369",
+  "BI1660",
+  "BI1665",
+  "BI2120",
+  "BI2195",
+  "BI2211",
+  "BI2212",
+  "BI2217",
+  "BI2220",
+  "BI2221",
+  "BI2228",
+  "BI2229",
+  "BI2241",
+  "BI2391",
+  "BI2392",
+  "BI2685",
+  "BI2752",
+  "BI2926",
+  "MI2540",
+  "MI2553"
+]);
+
+// Removes excluded devices using the shared EXCLUDED_DEVICE_IDS list
+// Returns { filtered: array, removedCount: number }
+// If ENABLE_DEVICE_FILTERING is false, returns data as-is with removedCount = 0
+const filterExcludedDevices = (rows = []) => {
+  if (!ENABLE_DEVICE_FILTERING) {
+    return { filtered: rows, removedCount: 0 };
+  }
+  const originalCount = rows.length;
+  const filtered = rows.filter(row => !EXCLUDED_DEVICE_IDS.has((row?.['Device ID'] || '').toString().trim()));
+  const removedCount = originalCount - filtered.length;
+  return { filtered, removedCount };
+};
+
 async function getDataFromGoogleSheets(sheetID, reference) {
   const accessGoogleSheet = async () => {
     try {
@@ -347,9 +399,22 @@ async function getLatestFileFromFolder(folderPath) { // ← now expects full pat
 async function sendMessage() {
   let getBaseSheetData = await getDataFromGoogleSheets(baseSpreadsheetId, 'BaseSheetCall');
   let getCubesSheetData = await getDataFromGoogleSheets(ibcCubesSpreadsheetId, 'CubesSheetCall');
-  let baseDataSheet = workbookData["Backwall"];
+  
+  // Filter excluded devices from base data (if enabled)
+  const baseDataFilterResult = filterExcludedDevices(workbookData["Backwall"] || []);
+  let baseDataSheet = baseDataFilterResult.filtered;
+  if (ENABLE_DEVICE_FILTERING && baseDataFilterResult.removedCount > 0) {
+    console.log(`\n📊 Base Data (Backwall): Removed ${baseDataFilterResult.removedCount} excluded device ID(s) from ${(workbookData["Backwall"] || []).length} total devices`);
+  }
+  
   // Get latest file from ibc-backwall-daily-files folder based on modification time
-  let reportDataSheet = await getLatestFileFromFolder(path.join(__dirname, 'ibc-backwall-daily-files'));
+  const originalReportData = await getLatestFileFromFolder(path.join(__dirname, 'ibc-backwall-daily-files'));
+  const reportDataFilterResult = filterExcludedDevices(originalReportData);
+  let reportDataSheet = reportDataFilterResult.filtered;
+  if (ENABLE_DEVICE_FILTERING && reportDataFilterResult.removedCount > 0) {
+    console.log(`📊 Report Data: Removed ${reportDataFilterResult.removedCount} excluded device ID(s) from ${originalReportData.length} total devices`);
+    console.log(`📋 Total excluded device IDs in list: ${EXCLUDED_DEVICE_IDS.size}\n`);
+  }
 
   // All Zone Status
   let ibcZoneStatus = {
