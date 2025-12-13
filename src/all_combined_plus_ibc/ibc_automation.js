@@ -1,14 +1,11 @@
-const cron = require('node-cron');
+const { delay } = require('../utils/helpers.js');
 const { chromium } = require('playwright');
 const { exec } = require('child_process');
 const moment = require('moment-timezone');
+const cron = require('node-cron');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
-
-function delay(milliseconds) {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
 
 // ✅ Run the original logic exactly as-is
 function runYourScript() {
@@ -349,7 +346,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start cron jobs - Comment this line to disable cron scheduling
-startCronJobs();
+// startCronJobs();
 
 // Uncomment below to run script immediately (for testing)
-// runYourScript();
+runYourScript();
