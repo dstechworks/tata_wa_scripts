@@ -346,7 +346,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Start cron jobs - Comment this line to disable cron scheduling
-// startCronJobs();
+startCronJobs();
 
 // Uncomment below to run script immediately (for testing)
-runYourScript();
+// runYourScript();
