@@ -2,7 +2,6 @@ const { delay } = require('../utils/helpers.js');
 const { chromium } = require('playwright');
 const { exec } = require('child_process');
 const moment = require('moment-timezone');
-const cron = require('node-cron');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
@@ -261,77 +260,12 @@ function runYourScript() {
             child.stderr.on('data', (data) => console.error('⚠️ Error from npm run 1:', data));
             child.on('close', (code) => {
                 console.log(`✅ "npm run 1" finished with exit code: ${code}`);
-                console.log(`🔄 Cron scheduler is still running. Waiting for next scheduled execution...`);
-                // Don't exit - keep the process alive for cron jobs to continue running
+                console.log(`🔄 Script run completed. Ready for next invocation.`);
             });
         } catch (error) {
             console.error('❌ Error in runYourScript:', error);
-            // Don't exit - keep the process alive for cron jobs to continue running
         }
     })();
-}
-
-const TIMEZONE = 'Asia/Kolkata';
-
-// Function to setup and start cron jobs
-function startCronJobs() {
-    // ✅ Mon–Sat @ 10:30 AM: Run IBC automation
-    cron.schedule('30 10 * * 1-6', () => {
-        console.log(`⏰ Executing IBC automation at Kolkata time: ${moment().tz(TIMEZONE).format("llll")}`);
-        runYourScript();
-    }, { timezone: TIMEZONE });
-
-    // ✅ Mon–Sat @ 5:00 PM: Run IBC automation
-    cron.schedule('0 17 * * 1-6', () => {
-        console.log(`⏰ Executing IBC automation at Kolkata time: ${moment().tz(TIMEZONE).format("llll")}`);
-        runYourScript();
-    }, { timezone: TIMEZONE });
-
-    const now = moment().tz(TIMEZONE);
-    const currentHour = now.hour();
-    const currentMinute = now.minute();
-    const currentDay = now.day(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
-    let nextMorningRun = moment(now).tz(TIMEZONE);
-    let nextEveningRun = moment(now).tz(TIMEZONE);
-
-    // Calculate next morning run (10:30 AM)
-    if (currentHour < 10 || (currentHour === 10 && currentMinute < 30)) {
-        if (currentDay >= 1 && currentDay <= 6) { // Mon-Sat
-            nextMorningRun.hour(10).minute(30).second(0);
-        } else {
-            nextMorningRun.add(1, 'day').hour(10).minute(30).second(0);
-        }
-    } else {
-        if (currentDay === 6) {
-            nextMorningRun.add(2, 'days').hour(10).minute(30).second(0);
-        } else if (currentDay === 0) {
-            nextMorningRun.add(1, 'day').hour(10).minute(30).second(0);
-        } else {
-            nextMorningRun.add(1, 'day').hour(10).minute(30).second(0);
-        }
-    }
-
-    // Calculate next evening run (5:00 PM)
-    if (currentHour < 17) {
-        if (currentDay >= 1 && currentDay <= 6) { // Mon-Sat
-            nextEveningRun.hour(17).minute(0).second(0);
-        } else {
-            nextEveningRun.add(1, 'day').hour(17).minute(0).second(0);
-        }
-    } else {
-        if (currentDay === 6) {
-            nextEveningRun.add(2, 'days').hour(17).minute(0).second(0);
-        } else if (currentDay === 0) {
-            nextEveningRun.add(1, 'day').hour(17).minute(0).second(0);
-        } else {
-            nextEveningRun.add(1, 'day').hour(17).minute(0).second(0);
-        }
-    }
-
-    // Find the next upcoming run (whichever is sooner)
-    const nextRun = nextMorningRun.isBefore(nextEveningRun) ? nextMorningRun : nextEveningRun;
-    console.log(`⏰ Next scheduled run: ${nextRun.format('dddd, MMMM Do YYYY, hh:mm A')} (Kolkata time)`);
 }
 
 // Keep the process alive and handle errors gracefully
@@ -345,8 +279,5 @@ process.on('unhandledRejection', (reason, promise) => {
     // Don't exit - keep cron jobs running
 });
 
-// Start cron jobs - Comment this line to disable cron scheduling
-startCronJobs();
-
 // Uncomment below to run script immediately (for testing)
-// runYourScript();
+runYourScript();

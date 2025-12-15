@@ -12,7 +12,7 @@
     "6": "node src/squad_360/squad_360.js",
     "7": "node src/mpdu_43vertical/mpdu_43vertical.js",
     "8": "node src/magenta_mobility/magenta_mobility.js",
-    "9": "node src/all_combined_plus_ibc/ibc_automation.js"
+    "9": "node src/all_combined_plus_ibc/ibc_cron.js"
   },
   "keywords": [],
   "author": "",
