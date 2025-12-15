@@ -36,7 +36,7 @@ cron.schedule('30 10 * * 1-6', () => {
 }, { timezone: TIMEZONE });
 
 // Mon–Sat @ 5:00 PM
-cron.schedule('55 13 * * 1-6', () => {
+cron.schedule('00 17 * * 1-6', () => {
     runScript('IBC Automation', scriptPath); // 05:00 PM
 }, { timezone: TIMEZONE });
 
