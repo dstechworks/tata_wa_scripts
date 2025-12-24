@@ -8,6 +8,9 @@ const fs = require('fs');
 
 // ✅ Run the original logic exactly as-is
 function runYourScript() {
+    console.log('-------------------------------- Starting IBC Automation --------------------------------');
+    console.log(moment().tz('Asia/Kolkata').format('DD-MM-YYYY HH:mm:ss'));
+    
     (async () => {
         try {
             // ✅ Save directly to ibc-backwall-daily-files folder
