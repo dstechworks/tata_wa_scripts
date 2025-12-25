@@ -399,14 +399,14 @@ async function getLatestFileFromFolder(folderPath) { // ← now expects full pat
 async function sendMessage() {
   let getBaseSheetData = await getDataFromGoogleSheets(baseSpreadsheetId, 'BaseSheetCall');
   let getCubesSheetData = await getDataFromGoogleSheets(ibcCubesSpreadsheetId, 'CubesSheetCall');
-  
+
   // Filter excluded devices from base data (if enabled)
   const baseDataFilterResult = filterExcludedDevices(workbookData["Backwall"] || []);
   let baseDataSheet = baseDataFilterResult.filtered;
   if (ENABLE_DEVICE_FILTERING && baseDataFilterResult.removedCount > 0) {
     console.log(`\n📊 Base Data (Backwall): Removed ${baseDataFilterResult.removedCount} excluded device ID(s) from ${(workbookData["Backwall"] || []).length} total devices`);
   }
-  
+
   // Get latest file from ibc-backwall-daily-files folder based on modification time
   const originalReportData = await getLatestFileFromFolder(path.join(__dirname, 'ibc-backwall-daily-files'));
   const reportDataFilterResult = filterExcludedDevices(originalReportData);
@@ -544,7 +544,8 @@ async function sendMessage() {
       "Gaurav Pundlik": "9831149422",
       "Rishab Agarwal": "9734469759",
       "Milan Anandan": "9903955267",
-      "Priyank Maheshwari": "9893585458"
+      "Priyank Maheshwari": "9893585458",
+      "Prachi Joshi": "7575002818"
     }
     let IBC_KOLKATA_POC_NUMBER = {
       "Hitesh": "8700685675",
