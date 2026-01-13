@@ -138,6 +138,7 @@ let mpduBranchWisePOCNum = {
     },
     "NEUP": {
         "Laksh Sethi": "9838347730",
+        "Arpit Malviya": "9936410875",
         "Hitesh": "8700685675",
         "Sandip": "9319798915",
         "Prachi Joshi": "7575002818",
