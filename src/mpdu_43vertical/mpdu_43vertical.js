@@ -100,6 +100,87 @@ function allBranchesZero(dataStore, branchList) {
 // COMMON CALCULATION FUNCTIONS
 // =================================================================================================
 
+// Function to calculate device counts directly from table data (for evening, no workbookData)
+function calculateDeviceCountsFromTableData(tableData, activeStatusFilter, tempClosedStatusFilter) {
+    let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
+
+    if (!tableData || tableData.length === 0) {
+        return dataStoreArray;
+    }
+
+    // Get unique branches from table data
+    const uniqueBranchCodes = getUniqueByKey(tableData, 'branch').filter(b => b);
+
+    // Initialize branch data
+    uniqueBranchCodes.forEach(branch => {
+        dataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+    });
+
+    // Count active/inactive from table data - only for devices with activeStatusFilter
+    tableData.forEach(item => {
+        const branchCode = item.branch;
+        const verified = item.verified || '';
+
+        if (!branchCode) return;
+
+        // Only process devices with the active status filter (e.g., "Verified & Currently Installed" or "Verified & Working")
+        if (verified !== activeStatusFilter) {
+            return;
+        }
+
+        // Ensure branch exists in dataStoreArray
+        if (!dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+        }
+
+        const displayName = item.display_name || item.display || '';
+
+        if (item.loggedIn === 1) {
+            dataStoreArray[0][branchCode].active += 1;
+            dataStoreArray[0].national.active += 1;
+        } else {
+            dataStoreArray[0][branchCode].inactive += 1;
+            dataStoreArray[0].national.inactive += 1;
+            if (displayName) {
+                dataStoreArray[0][branchCode].inActiveOutletList = dataStoreArray[0][branchCode].inActiveOutletList
+                    ? dataStoreArray[0][branchCode].inActiveOutletList + `, ${displayName}`
+                    : displayName;
+            }
+        }
+        dataStoreArray[0][branchCode].total += 1;
+        dataStoreArray[0].national.total += 1;
+    });
+
+    // Count tempClosed from table data - only for devices with tempClosedStatusFilter
+    tableData.forEach(item => {
+        const branchCode = item.branch;
+        const verified = item.verified || '';
+        const displayName = item.display_name || item.display || '';
+
+        if (!branchCode) return;
+
+        // Only count devices with tempClosed status filter
+        if (verified !== tempClosedStatusFilter) {
+            return;
+        }
+
+        // Ensure branch exists in dataStoreArray
+        if (!dataStoreArray[0][branchCode]) {
+            dataStoreArray[0][branchCode] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
+        }
+
+        dataStoreArray[0][branchCode].tempClosed += 1;
+        dataStoreArray[0].national.tempClosed += 1;
+        if (displayName) {
+            dataStoreArray[0][branchCode].tempClosedOutletList = dataStoreArray[0][branchCode].tempClosedOutletList
+                ? dataStoreArray[0][branchCode].tempClosedOutletList + `, ${displayName}`
+                : displayName;
+        }
+    });
+
+    return dataStoreArray;
+}
+
 // Common function to calculate device counts from API data
 function calculateDeviceCounts(sheetName, apiData, targetBranches = null, statusFilter = 'Verified & Currently Installed') {
     let dataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
@@ -291,27 +372,86 @@ async function getSquad360PreviousDayData() {
     }
 }
 
-// Function to get live data from APIs (for evening)
-async function getLiveData() {
-    try {
-        console.log('Getting live data from APIs...');
+// Helper function to check if timestamp is within 15 minutes (online)
+function isWithin15Minutes(timestamp) {
+    if (!timestamp) return false;
+    const timestampMoment = moment(timestamp);
+    const now = moment().tz("Asia/Kolkata");
+    const diffMinutes = now.diff(timestampMoment, 'minutes');
+    return diffMinutes >= 0 && diffMinutes <= 15;
+}
 
-        // Get MPDU data from API
-        await getAccessToken(1);
-        const server1Results = await getApiData(1);
-        const mpduData = server1Results.map(item => ({ ...item, sourceServer: 1 }));
+// Function to transform table data to API format
+function transformTableDataToApiFormat(tableData, timestampField = 'last_accessed') {
+    return tableData.map(item => ({
+        display: item.display_name || '',
+        loggedIn: isWithin15Minutes(item[timestampField]) ? 1 : 0,
+        id: item.id || '',
+        sourceServer: 'database',
+        branch: item.branch || '',
+        verified: item.verified || '',
+        display_name: item.display_name || ''
+    }));
+}
 
-        // Get Squad360 data
-        const squad360Data = await getSquad360Data();
+// Function to transform previous day database data combined with table data
+function transformPreviousDayDataWithTableData(previousDayData, tableData) {
+    // Create a lookup map from table data by display_name
+    const tableDataMap = {};
+    tableData.forEach(item => {
+        const displayName = item.display_name || '';
+        if (displayName) {
+            tableDataMap[displayName] = {
+                branch: item.branch || '',
+                verified: item.verified || ''
+            };
+        }
+    });
+
+    // Transform previous day data and match with table data
+    return previousDayData.map(item => {
+        const displayName = item.display_name || '';
+        const tableInfo = tableDataMap[displayName] || {};
 
         return {
-            mpduData,
-            squad360Data
+            display: displayName,
+            loggedIn: Number(item.display_count) > 0 ? 1 : 0,
+            id: item.id || '',
+            sourceServer: 'database',
+            branch: tableInfo.branch || '',
+            verified: tableInfo.verified || '',
+            display_name: displayName
         };
-    } catch (error) {
-        console.error("Error getting live data:", error);
-        throw error;
-    }
+    });
+}
+
+// Function to transform squad table data to Squad360 format
+function transformSquadTableDataToSquad360Format(squadTableData) {
+    return squadTableData.map(item => ({
+        screenId: item.id || '',
+        displayStatus: 'Active',
+        isActive: isWithin15Minutes(item.active_timestamp) ? 'Active' : 'InActive',
+        branch: item.branch || '',
+        dhanushId: '',
+        wdCode: '',
+        wdName: '',
+        name: item.display_name || '',
+        address: '',
+        pinCode: '',
+        city: '',
+        state: '',
+        status: '',
+        channel: '',
+        ownerName: '',
+        ownerContactNumber: '',
+        teamLeadName: '',
+        teamLeadContactNumber: '',
+        areaExecutiveName: '',
+        areaExecutiveContactNumber: '',
+        areaManagerName: '',
+        areaManagerContactNumber: '',
+        areaManagerMailId: ''
+    }));
 }
 
 // Function to get previous day data from database (for morning)
@@ -854,6 +994,18 @@ async function getBaseDataFromGoogleSheets() {
     }
 }
 
+async function getBaseDataFromSupabaseTable() {
+    // get data from no need to add branch filter mpdu_device_records, _43inchvertical_device_records, squad_device_records
+    const supabaseResponse1 = await pool.query(`SELECT * FROM mpdu_device_records;`);
+    const mpduTableData = supabaseResponse1.rows;
+    const supabaseResponse2 = await pool.query(`SELECT * FROM _43inchvertical_device_records;`);
+    const _43inchverticalTableData = supabaseResponse2.rows;
+    const supabaseResponse3 = await pool.query(`SELECT * FROM squad_device_records;`);
+    const squadTableData = supabaseResponse3.rows;
+
+    return { mpduTableData, _43inchverticalTableData, squadTableData };
+}
+
 // Function to get SQUAD-360 data
 async function getSquad360Data() {
     try {
@@ -1116,28 +1268,26 @@ async function startScript() {
     console.log(`SCRIPT RUNNING AT: ${currentTime.format("DD-MM-YYYY hh:mm A")}`);
     console.log("=====================================================================");
 
-    const baseDataReady = await getBaseDataFromGoogleSheets();
-    if (!baseDataReady) {
-        console.log("FATAL: Problem while getting data from google sheets. Exiting.");
-        return;
-    }
-    console.log("MPDU BASE DATA SHEET ::", workbookData['All Device'] ? workbookData['All Device'].length : 0);
-    console.log("43-VERTICAL BASE DATA SHEET ::", workbookData['43 Inch Vertical'] ? workbookData['43 Inch Vertical'].length : 0);
-
     const currentHour = currentTime.hour();
     if (currentHour > 16) {
         console.log(`\nIt's evening time, script run.`);
         console.log(`EVENING DATA GET DATE :- ${currentTime.format("YYYY-MM-DD")}`, "\n");
 
         try {
-            // Get live data from APIs
-            const { mpduData, squad360Data } = await getLiveData();
-            console.log(`Total MPDU results from APIs: ${mpduData.length}`);
-            console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
+            let { mpduTableData, _43inchverticalTableData, squadTableData } = await getBaseDataFromSupabaseTable();
+
+            // Transform table data to API format
+            const mpduData = transformTableDataToApiFormat(mpduTableData, 'last_accessed');
+            const vertical43Data = transformTableDataToApiFormat(_43inchverticalTableData, 'last_accessed');
+            const squad360Data = transformSquadTableDataToSquad360Format(squadTableData);
+
+            console.log(`Total MPDU results from table: ${mpduData.length}`);
+            console.log(`Total 43 Inch Vertical results from table: ${vertical43Data.length}`);
+            console.log(`Total Squad results from table: ${squad360Data.length}`);
 
             // ========== MPDU EVENING CALCULATIONS ==========
-            const mpduDataStoreArray = calculateDeviceCounts('All Device', mpduData);
-            const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
+            const mpduDataStoreArray = calculateDeviceCountsFromTableData(mpduData, 'Verified & Currently Installed', 'Verified & Temp Closed');
+            const uniqueBranchCodes = getUniqueByKey(mpduData, 'branch').filter(b => b);
 
             // Log Techworks API data counts for MPDU (Evening)
             console.log("\n--- MPDU Techworks API Data Counts (Evening) ---");
@@ -1147,7 +1297,7 @@ async function startScript() {
             const squad360Result = addSquad360Data(mpduDataStoreArray, squad360Data, null, uniqueBranchCodes);
 
             if (squad360Result.squad360Skipped > 0) {
-                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not found in Google Sheets`);
+                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not found`);
             }
             console.log("\n--- MPDU Squad360 Data Counts (Evening) ---");
             console.log(`Squad360 Active: ${squad360Result.squad360Active}, Inactive: ${squad360Result.squad360Inactive}, Total: ${squad360Data.length}`);
@@ -1161,7 +1311,7 @@ async function startScript() {
             }
 
             // Log MPDU summary preview for evening
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && mpduData.length > 0) {
+            if (mpduData.length > 0) {
                 let mpduMessageBodyNational = `
 NATIONAL MPDU STATUS:
 
@@ -1192,9 +1342,8 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
             }
 
             // ========== 43 INCH VERTICAL EVENING CALCULATIONS ==========
-            // 43 Inch Vertical uses 'Verified & Working' status instead of 'Verified & Currently Installed'
-            const verticalDataStoreArray = calculateDeviceCounts('43 Inch Vertical', mpduData, null, 'Verified & Working');
-            const verticalUniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
+            const verticalDataStoreArray = calculateDeviceCountsFromTableData(vertical43Data, 'Verified & Working', 'Verified & Temp Closed');
+            const verticalUniqueBranchCodes = getUniqueByKey(vertical43Data, 'branch').filter(b => b);
 
             // Branch difference check
             const verticalValidation = validateBranchTotals(verticalDataStoreArray, verticalUniqueBranchCodes, "43 INCH VERTICAL EVENING");
@@ -1204,7 +1353,7 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
             }
 
             // Log 43 Inch Vertical summary preview for evening
-            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && mpduData.length > 0) {
+            if (vertical43Data.length > 0) {
                 let verticalMessageBodyNational = `
 NATIONAL 43 VERTICAL STATUS
 NATIONAL WISE
@@ -1226,18 +1375,18 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
             }
 
             // Generate Excel files and send email
-            console.log("\n--- Generating Excel Files and Sending Email (Evening) ---");
-            const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
-            try {
-                const techworksFilePath = await generateTechworksExcel(mpduData, dailyFilesFolder);
-                const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
-                console.log(`Excel files generated successfully`);
-                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
-                console.log("Excel files generated and email sent successfully.\n");
-            } catch (error) {
-                console.error("Error generating Excel files or sending email:", error);
-                // Continue with message sending even if email fails
-            }
+            // console.log("\n--- Generating Excel Files and Sending Email (Evening) ---");
+            // const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
+            // try {
+            //     const techworksFilePath = await generateTechworksExcel(mpduData, dailyFilesFolder);
+            //     const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
+            //     console.log(`Excel files generated successfully`);
+            //     await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
+            //     console.log("Excel files generated and email sent successfully.\n");
+            // } catch (error) {
+            //     console.error("Error generating Excel files or sending email:", error);
+            //     // Continue with message sending even if email fails
+            // }
 
             await delay(8000);
 
@@ -1254,79 +1403,33 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
     } else {
         console.log(`\nIt's morning time, script run.`);
         console.log(`MORNING DATA GET DATE :- ${previousDate.format("YYYY-MM-DD")}`, "\n");
+
+        let { mpduTableData, _43inchverticalTableData, squadTableData } = await getBaseDataFromSupabaseTable();
+
+        // Transform table data to API format
+        const mpduData = transformTableDataToApiFormat(mpduTableData, 'last_accessed');
+        const vertical43Data = transformTableDataToApiFormat(_43inchverticalTableData, 'last_accessed');
+        const squad360Data = transformSquadTableDataToSquad360Format(squadTableData);
+
+        console.log(`Total MPDU results from table: ${mpduData.length}`);
+        console.log(`Total 43 Inch Vertical results from table: ${vertical43Data.length}`);
+        console.log(`Total Squad results from table: ${squad360Data.length}`);
+
         try {
-            // Get previous day data from database
-            const { mpduData, squad360Data } = await getPreviousDayData();
-            console.log(`Total MPDU results from database: ${mpduData.length}`);
-            console.log(`SQUAD-360: Fetched ${squad360Data.length} devices`);
-
             // ========== MPDU MORNING CALCULATIONS ==========
-            // Build MPDU data store array from database data using provided logic
-            let mpduDataStoreArray = [{ "national": { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0 } }];
+            const mpduDataStoreArray = calculateDeviceCountsFromTableData(mpduData, 'Verified & Currently Installed', 'Verified & Temp Closed');
+            const uniqueBranchCodes = getUniqueByKey(mpduData, 'branch').filter(b => b);
             let mpduAllZero = false;
-            const uniqueBranchCodes = getUniqueByKey(workbookData['All Device'], 'Branch Code');
 
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && mpduData.length > 0) {
+            // Log table data counts for MPDU (Morning)
+            console.log("\n--- MPDU Table Data Counts (Morning) ---");
+            console.log(`Table Active: ${mpduDataStoreArray[0].national.active}, Inactive: ${mpduDataStoreArray[0].national.inactive}, Total: ${mpduDataStoreArray[0].national.total}`);
 
-                uniqueBranchCodes.forEach(branch => {
-                    mpduDataStoreArray[0][branch] = { "active": 0, "inactive": 0, "tempClosed": 0, "total": 0, "inActiveOutletList": "", "tempClosedOutletList": "" };
-                });
-
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const currentStatus = deviceIdElement['Current Status'];
-                    const branchCode = deviceIdElement['Branch Code'];
-
-                    // Only count devices with "Verified & Currently Installed" status for active/inactive/total
-                    if (currentStatus === 'Verified & Currently Installed') {
-                        const findDeviceByTechworksId = mpduData.find(d => d.display_name == deviceIdElement['Techworks ID']);
-                        const outletName = deviceIdElement['Outlet Name']?.trim();
-
-                        if (findDeviceByTechworksId) {
-                            const onlineDevice = mpduData.find(d => d.display_name.replace(/\s*(\(new\)|\t)\s*/gi, '') == deviceIdElement['Techworks ID'] && Number(d.display_count) > 0);
-
-                            if (onlineDevice) {
-                                mpduDataStoreArray[0][branchCode].active += 1;
-                                mpduDataStoreArray[0].national.active += 1;
-                            } else {
-                                mpduDataStoreArray[0][branchCode].inactive += 1;
-                                mpduDataStoreArray[0].national.inactive += 1;
-                                if (outletName) {
-                                    mpduDataStoreArray[0][branchCode].inActiveOutletList = mpduDataStoreArray[0][branchCode].inActiveOutletList
-                                        ? mpduDataStoreArray[0][branchCode].inActiveOutletList + `, ${outletName}`
-                                        : outletName;
-                                }
-                            }
-
-                            mpduDataStoreArray[0][branchCode].total += 1;
-                            mpduDataStoreArray[0].national.total += 1;
-                        }
-                    }
-                });
-
-                // Count tempClosed from Google Sheets data where Current Status = "Verified & Temp Closed"
-                workbookData['All Device'].forEach(deviceIdElement => {
-                    const branchCode = deviceIdElement['Branch Code'];
-                    const currentStatus = deviceIdElement['Current Status'];
-                    const outletName = deviceIdElement['Outlet Name']?.trim();
-
-                    if (currentStatus === 'Verified & Temp Closed' && outletName &&
-                        mpduDataStoreArray[0][branchCode]) {
-                        mpduDataStoreArray[0][branchCode].tempClosed += 1;
-                        mpduDataStoreArray[0].national.tempClosed += 1;
-                        mpduDataStoreArray[0][branchCode].tempClosedOutletList = mpduDataStoreArray[0][branchCode].tempClosedOutletList ? mpduDataStoreArray[0][branchCode].tempClosedOutletList + `, ${outletName}` : outletName;
-                    }
-                });
-            }
-
-            // Log database data counts for MPDU (Morning)
-            console.log("\n--- MPDU Database Data Counts (Morning) ---");
-            console.log(`Database Active: ${mpduDataStoreArray[0].national.active}, Inactive: ${mpduDataStoreArray[0].national.inactive}, Total: ${mpduDataStoreArray[0].national.total}`);
-
-            // Add Squad360 previous day data
+            // Add Squad360 data
             const squad360Result = addSquad360Data(mpduDataStoreArray, squad360Data, null, uniqueBranchCodes);
 
             if (squad360Result.squad360Skipped > 0) {
-                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not found in Google Sheets`);
+                console.log(`\nSquad360: Skipped ${squad360Result.squad360Skipped} devices with branches not found`);
             }
             console.log("\n--- MPDU Squad360 Data Counts (Morning) ---");
             console.log(`Squad360 Active: ${squad360Result.squad360Active}, Inactive: ${squad360Result.squad360Inactive}, Total: ${squad360Data.length}`);
@@ -1339,7 +1442,7 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
                 return;
             }
 
-            if (workbookData['All Device'] && workbookData['All Device'].length > 0 && mpduData.length > 0) {
+            if (mpduData.length > 0) {
 
                 let mpduMessageBodyNational = `
 NATIONAL MPDU STATUS:
@@ -1372,17 +1475,8 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
             }
 
             // ========== 43 INCH VERTICAL MORNING CALCULATIONS ==========
-            // Transform database data to match API format for calculateDeviceCounts
-            const transformedMpduData = mpduData.map(row => ({
-                display: row.display_name,
-                loggedIn: Number(row.display_count) > 0 ? 1 : 0,
-                id: row.id || '',
-                sourceServer: 'database'
-            }));
-
-            // 43 Inch Vertical uses 'Verified & Working' status instead of 'Verified & Currently Installed'
-            const verticalDataStoreArray = calculateDeviceCounts('43 Inch Vertical', transformedMpduData, null, 'Verified & Working');
-            const verticalUniqueBranchCodes = getUniqueByKey(workbookData['43 Inch Vertical'], 'Branch Code');
+            const verticalDataStoreArray = calculateDeviceCountsFromTableData(vertical43Data, 'Verified & Working', 'Verified & Temp Closed');
+            const verticalUniqueBranchCodes = getUniqueByKey(vertical43Data, 'branch').filter(b => b);
 
             // Branch difference check
             const verticalValidation = validateBranchTotals(verticalDataStoreArray, verticalUniqueBranchCodes, "43 INCH VERTICAL MORNING");
@@ -1392,7 +1486,7 @@ SERN : ${mpduDataStoreArray[0].SERN?.active || 0} (Active) / ${mpduDataStoreArra
             }
 
             let verticalAllZero = false;
-            if (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].length > 0 && mpduData.length > 0) {
+            if (vertical43Data.length > 0) {
 
                 let verticalMessageBodyNational = `
 NATIONAL 43 VERTICAL STATUS
@@ -1425,25 +1519,19 @@ SHYD : ${verticalDataStoreArray[0].SHYD?.active || 0} (Active) / ${verticalDataS
             }
 
             // Generate Excel files and send email
-            console.log("\n--- Generating Excel Files and Sending Email (Morning) ---");
-            const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
-            try {
-                // Transform database data to match API format for Techworks Excel
-                const transformedMpduDataForExcel = mpduData.map(row => ({
-                    display: row.display_name,
-                    loggedIn: Number(row.display_count) > 0 ? 1 : 0,
-                    id: row.id || '',
-                    sourceServer: 'database'
-                }));
-                const techworksFilePath = await generateTechworksExcel(transformedMpduDataForExcel, dailyFilesFolder);
-                const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
-                console.log(`Excel files generated successfully`);
-                await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
-                console.log("Excel files generated and email sent successfully.\n");
-            } catch (error) {
-                console.error("Error generating Excel files or sending email:", error);
-                // Continue with message sending even if email fails
-            }
+            // console.log("\n--- Generating Excel Files and Sending Email (Morning) ---");
+            // const dailyFilesFolder = path.join(__dirname, 'mpdu-43vertical-daily-files');
+            // try {
+            //     // Use already transformed table data for Excel
+            //     const techworksFilePath = await generateTechworksExcel(mpduData, dailyFilesFolder);
+            //     const squad360FilePath = await generateSquad360Excel(squad360Data, dailyFilesFolder);
+            //     console.log(`Excel files generated successfully`);
+            //     await sendEmailWithAttachments(techworksFilePath, squad360FilePath);
+            //     console.log("Excel files generated and email sent successfully.\n");
+            // } catch (error) {
+            //     console.error("Error generating Excel files or sending email:", error);
+            //     // Continue with message sending even if email fails
+            // }
 
             await delay(10000);
 
