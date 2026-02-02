@@ -1,5 +1,5 @@
 const { deviceWiseBackwallStatusMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg, allCombinedSystemsNationalMsg, combinedSingleSystemsNationalMsg } = require('../utils/whatsappMsgTempUtils.js');
-const { delay, nameHelper, numberHelper, areAllZonesZero, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper, conditionCheckerHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, numbersHelper, areAllZonesZero, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper, conditionCheckerHelper } = require('../utils/helpers.js');
 const { saveDataToExcel } = require('../utils/saveExcelUtils.js');
 const {
   createIbcNationalMessage,
@@ -479,11 +479,11 @@ async function sendMessage() {
             x['Store Number'] = numberHelper(x['Phone Number']);
             x['Branch'] = naValueHelper(filterData['Branch']);
             x['TL Name'] = nameHelper(filterData['TL Name']);
-            x['TL Mobile No'] = numberHelper(filterData['TL Mobile No']);
+            x['TL Mobile No'] = filterData['TL Mobile No']; // Store raw value for numbersHelper
             x['AE Name'] = nameHelper(filterData['AE Name']);
-            x['AE Mobile No'] = numberHelper(filterData['AE Mobile No']);
+            x['AE Mobile No'] = filterData['AE Mobile No']; // Store raw value for numbersHelper
             x['AE 2 Name'] = nameHelper(filterData['AE 2 Name']);
-            x['AE 2 Mobile No'] = numberHelper(filterData['AE 2 Mobile No']);
+            x['AE 2 Mobile No'] = filterData['AE 2 Mobile No']; // Store raw value for numbersHelper
 
             temp.push(x)
           }
@@ -600,11 +600,11 @@ async function sendMessage() {
           AEDevice[x['AE Name']]['InActive Count'] = 0
 
           AEDevice[x['AE Name']]['AM Name'] = nameHelper(x['AM Name'])
-          AEDevice[x['AE Name']]['AM Mobile No'] = numberHelper(x['AM Mobile No'])
+          AEDevice[x['AE Name']]['AM Mobile No'] = x['AM Mobile No'] // Store raw value for numbersHelper
           AEDevice[x['AE Name']]['Assistant Name'] = nameHelper(x['Assistant Name'])
-          AEDevice[x['AE Name']]['Assistant Mobile No'] = numberHelper(x['Assistant Mobile No'])
+          AEDevice[x['AE Name']]['Assistant Mobile No'] = x['Assistant Mobile No'] // Store raw value for numbersHelper
           AEDevice[x['AE Name']]['Assistant 2 Name'] = nameHelper(x['Assistant 2 Name'])
-          AEDevice[x['AE Name']]['Assistant 2 Mobile No'] = numberHelper(x['Assistant 2 Mobile No'])
+          AEDevice[x['AE Name']]['Assistant 2 Mobile No'] = x['Assistant 2 Mobile No'] // Store raw value for numbersHelper
 
           AEDevice[x['Total Devices']] = []
         }
@@ -968,68 +968,80 @@ async function sendMessage() {
 
       if (property) {
         // Am Logic
-        if (isNaValueFoundHelper(data['AM Name']) && isNaValueFoundHelper(data['AM Mobile No'])) {
-          let messageBodyAM = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-          // console.log(`AM Name : ${data['AM Name']} , Mobile : ${data['AM Mobile No']} \n`);
-          // console.log(messageBodyAM, "\n");
+        if (isNaValueFoundHelper(data['AM Name']) && data['AM Mobile No']) {
+          const amNumbers = numbersHelper(data['AM Mobile No']);
+          
+          for (const amNum of amNumbers) {
+            let messageBodyAM = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+            // console.log(`AM Name : ${data['AM Name']} , Mobile : ${amNum} \n`);
+            // console.log(messageBodyAM, "\n");
 
-          let obj = {
-            "phoneNum": `+91${data['AM Mobile No']}`,
-            "sentName": property,
-            "total": data['Total Count'],
-            "active": data['Active Count'],
-            "inActive": data['InActive Count']
-          }
+            let obj = {
+              "phoneNum": `+91${amNum}`,
+              "sentName": property,
+              "total": data['Total Count'],
+              "active": data['Active Count'],
+              "inActive": data['InActive Count']
+            }
 
-          if (isMessageSent) {
-            let amMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-            console.log(i, "AM --->", amMsgRes);
-            ++whatsappMessageTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+              let amMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+              console.log(i, "AM --->", amMsgRes);
+              ++whatsappMessageTotalCount;
+              await delay(500);
+            }
           }
         }
 
         // Assistant Logic
-        if (isNaValueFoundHelper(data['Assistant Name']) && isNaValueFoundHelper(data['Assistant Mobile No'])) {
-          let messageBodyAssistant = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-          // console.log(`Assistant Name : ${data['Assistant Name']} , Mobile : ${data['Assistant Mobile No']} \n`);
-          // console.log(messageBodyAssistant, "\n");
+        if (isNaValueFoundHelper(data['Assistant Name']) && data['Assistant Mobile No']) {
+          const assistantNumbers = numbersHelper(data['Assistant Mobile No']);
+          
+          for (const assistantNum of assistantNumbers) {
+            let messageBodyAssistant = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+            // console.log(`Assistant Name : ${data['Assistant Name']} , Mobile : ${assistantNum} \n`);
+            // console.log(messageBodyAssistant, "\n");
 
-          let obj = {
-            "phoneNum": `+91${data['Assistant Mobile No']}`,
-            "sentName": property,
-            "total": data['Total Count'],
-            "active": data['Active Count'],
-            "inActive": data['InActive Count']
-          }
+            let obj = {
+              "phoneNum": `+91${assistantNum}`,
+              "sentName": property,
+              "total": data['Total Count'],
+              "active": data['Active Count'],
+              "inActive": data['InActive Count']
+            }
 
-          if (isMessageSent) {
-            let assistantMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-            console.log(i, "Assistant --->", assistantMsgRes);
-            ++whatsappMessageTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+              let assistantMsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+              console.log(i, "Assistant --->", assistantMsgRes);
+              ++whatsappMessageTotalCount;
+              await delay(500);
+            }
           }
         }
 
         // Assistant 2 Logic
-        if (isNaValueFoundHelper(data['Assistant 2 Name']) && isNaValueFoundHelper(data['Assistant 2 Mobile No'])) {
-          let messageBodyAssistant = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-          // console.log(`Assistant 2 Name : ${data['Assistant 2 Name']} , Mobile : ${data['Assistant 2 Mobile No']} \n`);
-          // console.log(messageBodyAssistant, "\n");
+        if (isNaValueFoundHelper(data['Assistant 2 Name']) && data['Assistant 2 Mobile No']) {
+          const assistant2Numbers = numbersHelper(data['Assistant 2 Mobile No']);
+          
+          for (const assistant2Num of assistant2Numbers) {
+            let messageBodyAssistant = `BACKWALL STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+            // console.log(`Assistant 2 Name : ${data['Assistant 2 Name']} , Mobile : ${assistant2Num} \n`);
+            // console.log(messageBodyAssistant, "\n");
 
-          let obj = {
-            "phoneNum": `+91${data['Assistant 2 Mobile No']}`,
-            "sentName": property,
-            "total": data['Total Count'],
-            "active": data['Active Count'],
-            "inActive": data['InActive Count']
-          }
+            let obj = {
+              "phoneNum": `+91${assistant2Num}`,
+              "sentName": property,
+              "total": data['Total Count'],
+              "active": data['Active Count'],
+              "inActive": data['InActive Count']
+            }
 
-          if (isMessageSent) {
-            let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-            console.log(i, "Assistant 2 --->", assistant2MsgRes);
-            ++whatsappMessageTotalCount;
-            await delay(500);
+            if (isMessageSent) {
+              let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "IBC-BACKWALL", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+              console.log(i, "Assistant 2 --->", assistant2MsgRes);
+              ++whatsappMessageTotalCount;
+              await delay(500);
+            }
           }
         }
       }
@@ -1054,72 +1066,88 @@ async function sendMessage() {
       // console.log("Branch :: ", x['Branch']);
 
       // Ae Logic
-      if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
-        let messageBodyAE = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-        // console.log("\n")
-        // console.log(messageBodyAE)
+      if (isNaValueFoundHelper(x['AE Name']) && x['AE Mobile No']) {
+        const aeNumbers = numbersHelper(x['AE Mobile No']);
+        const tlNumbers = numbersHelper(x['TL Mobile No']);
+        const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
+        
+        for (const aeNum of aeNumbers) {
+          let messageBodyAE = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
+          // console.log("\n")
+          // console.log(messageBodyAE)
 
-        let obj = {
-          "phoneNum": `+91${x['AE Mobile No']}`,
-          "storeName": x['Store Name'],
-          "dhanushId": 'NA',
-          "tlName": x['TL Name'],
-          "tlNum": x['TL Mobile No'],
-          "storeNum": x['Store Number'],
-          "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
-        }
+          let obj = {
+            "phoneNum": `+91${aeNum}`,
+            "storeName": x['Store Name'],
+            "dhanushId": 'NA',
+            "tlName": x['TL Name'],
+            "tlNum": firstTlNum,
+            "storeNum": x['Store Number'],
+            "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${aeNum}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
+          }
 
-        if (isMessageSent) {
-          let aeMsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-          console.log(i, "AE --->", aeMsgRes);
-          ++whatsappMessageTotalCount;
-          await delay(500);
+          if (isMessageSent) {
+            let aeMsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+            console.log(i, "AE --->", aeMsgRes);
+            ++whatsappMessageTotalCount;
+            await delay(500);
+          }
         }
       }
 
       // Ae 2 Logic
-      if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
-        let messageBodyAE2 = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-        // console.log("\n")
-        // console.log(messageBodyAE2)
+      if (isNaValueFoundHelper(x['AE 2 Name']) && x['AE 2 Mobile No']) {
+        const ae2Numbers = numbersHelper(x['AE 2 Mobile No']);
+        const tlNumbers = numbersHelper(x['TL Mobile No']);
+        const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
+        
+        for (const ae2Num of ae2Numbers) {
+          let messageBodyAE2 = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
+          // console.log("\n")
+          // console.log(messageBodyAE2)
 
-        let obj = {
-          "phoneNum": `+91${x['AE 2 Mobile No']}`,
-          "storeName": x['Store Name'],
-          "dhanushId": 'NA',
-          "tlName": x['TL Name'],
-          "tlNum": x['TL Mobile No'],
-          "storeNum": x['Store Number'],
-          "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
-        }
+          let obj = {
+            "phoneNum": `+91${ae2Num}`,
+            "storeName": x['Store Name'],
+            "dhanushId": 'NA',
+            "tlName": x['TL Name'],
+            "tlNum": firstTlNum,
+            "storeNum": x['Store Number'],
+            "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${ae2Num}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
+          }
 
-        if (isMessageSent) {
-          let ae2MsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-          console.log(i, "AE 2 --->", ae2MsgRes);
-          ++whatsappMessageTotalCount;
-          await delay(500);
+          if (isMessageSent) {
+            let ae2MsgRes = await ae_msg("ae_template_for_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+            console.log(i, "AE 2 --->", ae2MsgRes);
+            ++whatsappMessageTotalCount;
+            await delay(500);
+          }
         }
       }
 
       // Tl Logic
-      if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
-        let messageBodyTL = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
-        // console.log("\n")
-        // console.log(messageBodyTL)
+      if (isNaValueFoundHelper(x['TL Name']) && x['TL Mobile No']) {
+        const tlNumbers = numbersHelper(x['TL Mobile No']);
+        
+        for (const tlNum of tlNumbers) {
+          let messageBodyTL = `Hi ! Backwall is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
+          // console.log("\n")
+          // console.log(messageBodyTL)
 
-        let obj = {
-          "phoneNum": `+91${x['TL Mobile No']}`,
-          "storeName": x['Store Name'],
-          "dhanushId": 'NA',
-          "storeNum": x['Store Number'],
-          "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
-        }
+          let obj = {
+            "phoneNum": `+91${tlNum}`,
+            "storeName": x['Store Name'],
+            "dhanushId": 'NA',
+            "storeNum": x['Store Number'],
+            "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${tlNum}&dhanushid=NA&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=ibcBackwall`
+          }
 
-        if (isMessageSent) {
-          let tlMsgRes = await tl_msg("team_lead_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-          console.log(i, "TL --->", tlMsgRes);
-          ++whatsappMessageTotalCount;
-          await delay(500);
+          if (isMessageSent) {
+            let tlMsgRes = await tl_msg("team_lead_backwall", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+            console.log(i, "TL --->", tlMsgRes);
+            ++whatsappMessageTotalCount;
+            await delay(500);
+          }
         }
       }
     }

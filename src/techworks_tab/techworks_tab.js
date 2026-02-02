@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg, tl_msg } = require('../utils/whatsappMsgTempUtils');
-const { delay, nameHelper, numberHelper, areAllZonesZero, conditionCheckerHelper, naValueHelper, spaceCheckerHelper, isNaValueFoundHelper } = require('../utils/helpers.js');
+const { delay, nameHelper, numberHelper, numbersHelper, areAllZonesZero, conditionCheckerHelper, naValueHelper, spaceCheckerHelper, isNaValueFoundHelper } = require('../utils/helpers.js');
 const { google } = require('googleapis');
 const { Pool } = require('pg');
 const path = require('path');
@@ -118,15 +118,15 @@ async function sendMessage() {
                     x['Store Name'] = naValueHelper(filterData['Store Name']);
                     x['Branch'] = naValueHelper(filterData['Branch']);
                     x['TL Name'] = nameHelper(filterData['TL Name']);
-                    x['TL Mobile No'] = numberHelper(filterData['TL Mobile No']);
+                    x['TL Mobile No'] = filterData['TL Mobile No']; // Store raw value for numbersHelper
                     x['AE Name'] = nameHelper(filterData['AE Name']);
-                    x['AE Mobile No'] = numberHelper(filterData['AE Mobile No']);
+                    x['AE Mobile No'] = filterData['AE Mobile No']; // Store raw value for numbersHelper
                     x['AM Name'] = nameHelper(filterData['AM Name']);
-                    x['AM Mobile No'] = numberHelper(filterData['AM Mobile No']);
+                    x['AM Mobile No'] = filterData['AM Mobile No']; // Store raw value for numbersHelper
                     x['Assistant Name'] = nameHelper(filterData['Assistant Name']);
-                    x['Assistant Mobile No'] = numberHelper(filterData['Assistant Mobile No']);
+                    x['Assistant Mobile No'] = filterData['Assistant Mobile No']; // Store raw value for numbersHelper
                     x['Assistant 2 Name'] = nameHelper(filterData['Assistant 2 Name']);
-                    x['Assistant 2 Mobile No'] = numberHelper(filterData['Assistant 2 Mobile No']);
+                    x['Assistant 2 Mobile No'] = filterData['Assistant 2 Mobile No']; // Store raw value for numbersHelper
                 }
                 if (filterData && (args === "getMatchedDevices")) {
                     dataArr.push(x);
@@ -269,11 +269,11 @@ async function sendMessage() {
                     AEDevice[x['AE Name']]['InActive Count'] = 0
 
                     AEDevice[x['AE Name']]['AM Name'] = nameHelper(x['AM Name'])
-                    AEDevice[x['AE Name']]['AM Mobile No'] = numberHelper(x['AM Mobile No'])
+                    AEDevice[x['AE Name']]['AM Mobile No'] = x['AM Mobile No'] // Store raw value for numbersHelper
                     AEDevice[x['AE Name']]['Assistant Name'] = nameHelper(x['Assistant Name'])
-                    AEDevice[x['AE Name']]['Assistant Mobile No'] = numberHelper(x['Assistant Mobile No'])
+                    AEDevice[x['AE Name']]['Assistant Mobile No'] = x['Assistant Mobile No'] // Store raw value for numbersHelper
                     AEDevice[x['AE Name']]['Assistant 2 Name'] = nameHelper(x['Assistant 2 Name'])
-                    AEDevice[x['AE Name']]['Assistant 2 Mobile No'] = numberHelper(x['Assistant 2 Mobile No'])
+                    AEDevice[x['AE Name']]['Assistant 2 Mobile No'] = x['Assistant 2 Mobile No'] // Store raw value for numbersHelper
 
                     AEDevice[x['Total Devices']] = []
                 }
@@ -287,11 +287,11 @@ async function sendMessage() {
                     'Store Number': naValueHelper(x['so_contact']),
                     'Branch': naValueHelper(x['Branch']),
                     'TL Name': nameHelper(x['TL Name']),
-                    'TL Mobile No': numberHelper(x['TL Mobile No']),
+                    'TL Mobile No': x['TL Mobile No'], // Store raw value for numbersHelper
                     'AE Name': nameHelper(x['AE Name']),
-                    'AE Mobile No': numberHelper(x['AE Mobile No']),
+                    'AE Mobile No': x['AE Mobile No'], // Store raw value for numbersHelper
                     'AE 2 Name': nameHelper(x['AE 2 Name']),
-                    'AE 2 Mobile No': numberHelper(x['AE 2 Mobile No']),
+                    'AE 2 Mobile No': x['AE 2 Mobile No'], // Store raw value for numbersHelper
                 })
             }
         })
@@ -443,68 +443,80 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
 
             if (property) {
                 // Am Logic
-                if (isNaValueFoundHelper(data['AM Name']) && isNaValueFoundHelper(data['AM Mobile No'])) {
-                    let messageBodyAM = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-                    // console.log(`AM Name : ${data['AM Name']} , Mobile : ${data['AM Mobile No']} \n`);
-                    // console.log(messageBodyAM, "\n");
+                if (isNaValueFoundHelper(data['AM Name']) && data['AM Mobile No']) {
+                    const amNumbers = numbersHelper(data['AM Mobile No']);
+                    
+                    for (const amNum of amNumbers) {
+                        let messageBodyAM = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+                        // console.log(`AM Name : ${data['AM Name']} , Mobile : ${amNum} \n`);
+                        // console.log(messageBodyAM, "\n");
 
-                    let obj = {
-                        "phoneNum": `+91${data['AM Mobile No']}`,
-                        "sentName": property,
-                        "total": data['Total Count'],
-                        "active": data['Active Count'],
-                        "inActive": data['InActive Count']
-                    }
+                        let obj = {
+                            "phoneNum": `+91${amNum}`,
+                            "sentName": property,
+                            "total": data['Total Count'],
+                            "active": data['Active Count'],
+                            "inActive": data['InActive Count']
+                        }
 
-                    if (isMessageSent) {
-                        let amMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                        console.log(i, "AM --->", amMsgRes);
-                        ++tabTotalCount;
-                        await delay(500);
+                        if (isMessageSent) {
+                            let amMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                            console.log(i, "AM --->", amMsgRes);
+                            ++tabTotalCount;
+                            await delay(500);
+                        }
                     }
                 }
 
                 // Assistant Logic
-                if (isNaValueFoundHelper(data['Assistant Name']) && isNaValueFoundHelper(data['Assistant Mobile No'])) {
-                    let messageBodyAssistant = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-                    // console.log(`Assistant Name : ${data['Assistant Name']} , Mobile : ${data['Assistant Mobile No']} \n`);
-                    // console.log(messageBodyAssistant, "\n");
+                if (isNaValueFoundHelper(data['Assistant Name']) && data['Assistant Mobile No']) {
+                    const assistantNumbers = numbersHelper(data['Assistant Mobile No']);
+                    
+                    for (const assistantNum of assistantNumbers) {
+                        let messageBodyAssistant = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+                        // console.log(`Assistant Name : ${data['Assistant Name']} , Mobile : ${assistantNum} \n`);
+                        // console.log(messageBodyAssistant, "\n");
 
-                    let obj = {
-                        "phoneNum": `+91${data['Assistant Mobile No']}`,
-                        "sentName": property,
-                        "total": data['Total Count'],
-                        "active": data['Active Count'],
-                        "inActive": data['InActive Count']
-                    }
+                        let obj = {
+                            "phoneNum": `+91${assistantNum}`,
+                            "sentName": property,
+                            "total": data['Total Count'],
+                            "active": data['Active Count'],
+                            "inActive": data['InActive Count']
+                        }
 
-                    if (isMessageSent) {
-                        let assistantMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                        console.log(i, "Assistant --->", assistantMsgRes);
-                        ++tabTotalCount;
-                        await delay(500);
+                        if (isMessageSent) {
+                            let assistantMsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                            console.log(i, "Assistant --->", assistantMsgRes);
+                            ++tabTotalCount;
+                            await delay(500);
+                        }
                     }
                 }
 
                 // Assistant 2 Logic
-                if (isNaValueFoundHelper(data['Assistant 2 Name']) && isNaValueFoundHelper(data['Assistant 2 Mobile No'])) {
-                    let messageBodyAssistant = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
-                    // console.log(`Assistant 2 Name : ${data['Assistant 2 Name']} , Mobile : ${data['Assistant 2 Mobile No']} \n`);
-                    // console.log(messageBodyAssistant, "\n");
+                if (isNaValueFoundHelper(data['Assistant 2 Name']) && data['Assistant 2 Mobile No']) {
+                    const assistant2Numbers = numbersHelper(data['Assistant 2 Mobile No']);
+                    
+                    for (const assistant2Num of assistant2Numbers) {
+                        let messageBodyAssistant = `TABLET STATUS\nAE Name: ${property}\nTotal Devices: ${data['Total Count']}\nActive Devices: ${data['Active Count']}\nInactive Devices: ${data['InActive Count']}`
+                        // console.log(`Assistant 2 Name : ${data['Assistant 2 Name']} , Mobile : ${assistant2Num} \n`);
+                        // console.log(messageBodyAssistant, "\n");
 
-                    let obj = {
-                        "phoneNum": `+91${data['Assistant 2 Mobile No']}`,
-                        "sentName": property,
-                        "total": data['Total Count'],
-                        "active": data['Active Count'],
-                        "inActive": data['InActive Count']
-                    }
+                        let obj = {
+                            "phoneNum": `+91${assistant2Num}`,
+                            "sentName": property,
+                            "total": data['Total Count'],
+                            "active": data['Active Count'],
+                            "inActive": data['InActive Count']
+                        }
 
-                    if (isMessageSent) {
-                        let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                        console.log(i, "Assistant 2 --->", assistant2MsgRes);
-                        ++tabTotalCount;
-                        await delay(500);
+                        if (isMessageSent) {
+                            let assistant2MsgRes = await am_assistant_msg("am_assistant_common", "TABLET", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                            console.log(i, "Assistant 2 --->", assistant2MsgRes);
+                            ++tabTotalCount;
+                            await delay(500);
+                        }
                     }
                 }
             }
@@ -525,72 +537,88 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             // console.log("Branch :: ", x['Branch']);
 
             // Ae Logic
-            if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
-                let messageBodyAE = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                // console.log(`${x['AE Mobile No']}`, "\n")
-                // console.log(messageBodyAE)
+            if (isNaValueFoundHelper(x['AE Name']) && x['AE Mobile No']) {
+                const aeNumbers = numbersHelper(x['AE Mobile No']);
+                const tlNumbers = numbersHelper(x['TL Mobile No']);
+                const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
+                
+                for (const aeNum of aeNumbers) {
+                    let messageBodyAE = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
+                    // console.log(`${aeNum}`, "\n")
+                    // console.log(messageBodyAE)
 
-                let obj = {
-                    "phoneNum": `+91${x['AE Mobile No']}`,
-                    "storeName": x['Store Name'],
-                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                    "tlName": x['TL Name'],
-                    "tlNum": x['TL Mobile No'],
-                    "storeNum": x['Store Number'],
-                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                }
+                    let obj = {
+                        "phoneNum": `+91${aeNum}`,
+                        "storeName": x['Store Name'],
+                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                        "tlName": x['TL Name'],
+                        "tlNum": firstTlNum,
+                        "storeNum": x['Store Number'],
+                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${aeNum}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
+                    }
 
-                if (isMessageSent) {
-                    let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", aeMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let aeMsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                        console.log(i, "AE --->", aeMsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
             }
 
             // Ae 2 Logic
-            if (isNaValueFoundHelper(x['AE 2 Name']) && isNaValueFoundHelper(x['AE 2 Mobile No'])) {
-                let messageBodyAE2 = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-                // console.log(`${x['AE Mobile No']}`, "\n")
-                // console.log(messageBodyAE2)
+            if (isNaValueFoundHelper(x['AE 2 Name']) && x['AE 2 Mobile No']) {
+                const ae2Numbers = numbersHelper(x['AE 2 Mobile No']);
+                const tlNumbers = numbersHelper(x['TL Mobile No']);
+                const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
+                
+                for (const ae2Num of ae2Numbers) {
+                    let messageBodyAE2 = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
+                    // console.log(`${ae2Num}`, "\n")
+                    // console.log(messageBodyAE2)
 
-                let obj = {
-                    "phoneNum": `+91${x['AE 2 Mobile No']}`,
-                    "storeName": x['Store Name'],
-                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                    "tlName": x['TL Name'],
-                    "tlNum": x['TL Mobile No'],
-                    "storeNum": x['Store Number'],
-                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${x['AE 2 Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                }
+                    let obj = {
+                        "phoneNum": `+91${ae2Num}`,
+                        "storeName": x['Store Name'],
+                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                        "tlName": x['TL Name'],
+                        "tlNum": firstTlNum,
+                        "storeNum": x['Store Number'],
+                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE 2 Name'])}&number=${ae2Num}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
+                    }
 
-                if (isMessageSent) {
-                    let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "AE --->", ae2MsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let ae2MsgRes = await ae_msg("ae_template_for_tablet", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                        console.log(i, "AE --->", ae2MsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
             }
 
             // Tl Logic
-            if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
-                let messageBodyTL = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
-                // console.log(`${x['TL Mobile No']}`, "\n")
-                // console.log(messageBodyTL)
+            if (isNaValueFoundHelper(x['TL Name']) && x['TL Mobile No']) {
+                const tlNumbers = numbersHelper(x['TL Mobile No']);
+                
+                for (const tlNum of tlNumbers) {
+                    let messageBodyTL = `Hi ! Tablet is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
+                    // console.log(`${tlNum}`, "\n")
+                    // console.log(messageBodyTL)
 
-                let obj = {
-                    "phoneNum": `+91${x['TL Mobile No']}`,
-                    "storeName": x['Store Name'],
-                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                    "storeNum": x['Store Number'],
-                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
-                }
+                    let obj = {
+                        "phoneNum": `+91${tlNum}`,
+                        "storeName": x['Store Name'],
+                        "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                        "storeNum": x['Store Number'],
+                        "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${tlNum}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=tab`
+                    }
 
-                if (isMessageSent) {
-                    let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                    console.log(i, "TL --->", tlMsgRes);
-                    ++tabTotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let tlMsgRes = await tl_msg("team_lead_tab", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                        console.log(i, "TL --->", tlMsgRes);
+                        ++tabTotalCount;
+                        await delay(500);
+                    }
                 }
             }
         }

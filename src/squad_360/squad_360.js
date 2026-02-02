@@ -1,5 +1,5 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg_squad_360, tl_msg_squad_360 } = require('../utils/whatsappMsgTempUtils');
-const { delay, areAllZonesZero, nameHelper, numberHelper, conditionCheckerHelper, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper } = require('../utils/helpers');
+const { delay, areAllZonesZero, nameHelper, numberHelper, numbersHelper, conditionCheckerHelper, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper } = require('../utils/helpers');
 const { saveDataToExcel } = require('../utils/saveExcelUtils');
 const moment = require('moment-timezone');
 const axios = require('axios');
@@ -155,18 +155,18 @@ const renameAllKeyNames = async (data) => {
         x['WD Name'] = naValueHelper(filterData.wdName);
         x['Status'] = filterData.isActive; // Add the status field with 'Active'/'InActive' value
         x['TL Name'] = nameHelper(filterData.teamLeadName);
-        x['TL Mobile No'] = numberHelper(filterData.teamLeadContactNumber);
+        x['TL Mobile No'] = filterData.teamLeadContactNumber; // Store raw value for numbersHelper
         x['AE Name'] = nameHelper(filterData.areaExecutiveName);
-        x['AE Mobile No'] = numberHelper(filterData.areaExecutiveContactNumber);
+        x['AE Mobile No'] = filterData.areaExecutiveContactNumber; // Store raw value for numbersHelper
         x['AM Name'] = nameHelper(filterData.areaManagerName);
-        x['AM Mobile No'] = numberHelper(filterData.areaManagerContactNumber);
+        x['AM Mobile No'] = filterData.areaManagerContactNumber; // Store raw value for numbersHelper
 
         // Find matching assistant from listOfAssistant
         const branch = naValueHelper(filterData.branch?.trim());
         const assistant = listOfAssistant.find(a => a.Branch === branch);
 
         x['Assistant Name'] = assistant ? nameHelper(assistant['Assistant Name']) : "";
-        x['Assistant Mobile No'] = assistant ? numberHelper(assistant['Assistant Mobile No']) : "";
+        x['Assistant Mobile No'] = assistant ? assistant['Assistant Mobile No'] : ""; // Store raw value for numbersHelper
 
         return x;
     });
@@ -252,7 +252,7 @@ const startMessages = async (data) => {
     data.forEach(x => {
         const aeName = nameHelper(x['AE Name']);
         const assistant1 = nameHelper(x['Assistant Name']);
-        const assistant1Mobile = numberHelper(x['Assistant Mobile No']);
+        const assistant1Mobile = x['Assistant Mobile No']; // Store raw value for numbersHelper
         const branch = x['Branch'];
 
         // Initialize branch structure if needed
@@ -278,9 +278,9 @@ const startMessages = async (data) => {
                 'Store Number': numberHelper(x['Store Number']),
                 'Branch': naValueHelper(x['Branch']),
                 'TL Name': nameHelper(x['TL Name']),
-                'TL Mobile No': numberHelper(x['TL Mobile No']),
+                'TL Mobile No': x['TL Mobile No'], // Store raw value for numbersHelper
                 'AE Name': nameHelper(x['AE Name']),
-                'AE Mobile No': numberHelper(x['AE Mobile No'])
+                'AE Mobile No': x['AE Mobile No'] // Store raw value for numbersHelper
             });
         }
 
@@ -294,7 +294,7 @@ const startMessages = async (data) => {
                 'InActive Count': 0,
                 'AM': {
                     'Name': nameHelper(x['AM Name']),
-                    'Mobile No': numberHelper(x['AM Mobile No'])
+                    'Mobile No': x['AM Mobile No'] // Store raw value for numbersHelper
                 },
                 'Assistants': {}
             };
@@ -438,50 +438,58 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         const [aeName, aeData] = AEDeviceEntries[i];
 
         // ========== AM Message ========== //
-        if (isNaValueFoundHelper(aeData.AM?.['Name']) && isNaValueFoundHelper(aeData.AM?.['Mobile No'])) {
-            const messageBodyAM = `SQUAD-360 STATUS\nAE Name: ${aeName}\nTotal Devices: ${aeData['Total Count']}\nActive Devices: ${aeData['Active Count']}\nInactive Devices: ${aeData['InActive Count']}`;
+        if (isNaValueFoundHelper(aeData.AM?.['Name']) && aeData.AM?.['Mobile No']) {
+            const amNumbers = numbersHelper(aeData.AM['Mobile No']);
+            
+            for (const amNum of amNumbers) {
+                const messageBodyAM = `SQUAD-360 STATUS\nAE Name: ${aeName}\nTotal Devices: ${aeData['Total Count']}\nActive Devices: ${aeData['Active Count']}\nInactive Devices: ${aeData['InActive Count']}`;
 
-            // console.log(`AM Name : ${aeData.AM['Name']} , Mobile : ${aeData.AM['Mobile No']}`);
-            // console.log(messageBodyAM, "\n");
+                // console.log(`AM Name : ${aeData.AM['Name']} , Mobile : ${amNum}`);
+                // console.log(messageBodyAM, "\n");
 
-            const obj = {
-                phoneNum: `+91${aeData.AM['Mobile No']}`,
-                sentName: aeName,
-                total: aeData['Total Count'],
-                active: aeData['Active Count'],
-                inActive: aeData['InActive Count']
-            };
+                const obj = {
+                    phoneNum: `+91${amNum}`,
+                    sentName: aeName,
+                    total: aeData['Total Count'],
+                    active: aeData['Active Count'],
+                    inActive: aeData['InActive Count']
+                };
 
-            if (isMessageSent) {
-                let amMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                console.log(i, "AM --->", amMsgRes);
-                ++squad360TotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let amMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                    console.log(i, "AM --->", amMsgRes);
+                    ++squad360TotalCount;
+                    await delay(500);
+                }
             }
         }
 
         // ========== Assistant Messages ========== //
         const assistants = aeData.Assistants || {};
         for (const [assistantName, assistantData] of Object.entries(assistants)) {
-            if (isNaValueFoundHelper(assistantName) && isNaValueFoundHelper(assistantData?.['Mobile No'])) {
-                const messageBodyAssistant = `SQUAD-360 STATUS\nAE Name: ${aeName}\nAssistant: ${assistantName}\nTotal Devices: ${assistantData.Total}\nActive Devices: ${assistantData.Active}\nInactive Devices: ${assistantData.Inactive}`;
+            if (isNaValueFoundHelper(assistantName) && assistantData?.['Mobile No']) {
+                const assistantNumbers = numbersHelper(assistantData['Mobile No']);
+                
+                for (const assistantNum of assistantNumbers) {
+                    const messageBodyAssistant = `SQUAD-360 STATUS\nAE Name: ${aeName}\nAssistant: ${assistantName}\nTotal Devices: ${assistantData.Total}\nActive Devices: ${assistantData.Active}\nInactive Devices: ${assistantData.Inactive}`;
 
-                // console.log(`Assistant Name : ${assistantName} , Mobile : ${assistantData['Mobile No']}`);
-                // console.log(messageBodyAssistant, "\n");
+                    // console.log(`Assistant Name : ${assistantName} , Mobile : ${assistantNum}`);
+                    // console.log(messageBodyAssistant, "\n");
 
-                const obj = {
-                    phoneNum: `+91${assistantData['Mobile No']}`,
-                    sentName: aeName,
-                    total: assistantData.Total,
-                    active: assistantData.Active,
-                    inActive: assistantData.Inactive
-                };
+                    const obj = {
+                        phoneNum: `+91${assistantNum}`,
+                        sentName: aeName,
+                        total: assistantData.Total,
+                        active: assistantData.Active,
+                        inActive: assistantData.Inactive
+                    };
 
-                if (isMessageSent) {
-                    let assistantMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
-                    console.log(i, "Assistant --->", assistantMsgRes);
-                    ++squad360TotalCount;
-                    await delay(500);
+                    if (isMessageSent) {
+                        let assistantMsgRes = await am_assistant_msg("am_assistant_common", "SQUAD-360", obj.phoneNum, obj.sentName, obj.total, obj.active, obj.inActive);
+                        console.log(i, "Assistant --->", assistantMsgRes);
+                        ++squad360TotalCount;
+                        await delay(500);
+                    }
                 }
             }
         }
@@ -500,49 +508,59 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         // console.log("Branch :: ", x['Branch']);
 
         // Ae Logic
-        if (isNaValueFoundHelper(x['AE Name']) && isNaValueFoundHelper(x['AE Mobile No'])) {
-            let messageBodyAE = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${x['TL Mobile No']}\nStore Number: ${x['Store Number']}`;
-            // console.log(`${x['AE Mobile No']}`, "\n")
-            // console.log(messageBodyAE)
+        if (isNaValueFoundHelper(x['AE Name']) && x['AE Mobile No']) {
+            const aeNumbers = numbersHelper(x['AE Mobile No']);
+            const tlNumbers = numbersHelper(x['TL Mobile No']);
+            const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
+            
+            for (const aeNum of aeNumbers) {
+                let messageBodyAE = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${aeNum}`, "\n")
+                // console.log(messageBodyAE)
 
-            let obj = {
-                "phoneNum": `+91${x['AE Mobile No']}`,
-                "storeName": x['Store Name'],
-                "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                "tlName": x['TL Name'],
-                "tlNum": x['TL Mobile No'],
-                "storeNum": x['Store Number'],
-                "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${x['AE Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
-            }
+                let obj = {
+                    "phoneNum": `+91${aeNum}`,
+                    "storeName": x['Store Name'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "tlName": x['TL Name'],
+                    "tlNum": firstTlNum,
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['AE Name'])}&number=${aeNum}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
+                }
 
-            if (isMessageSent) {
-                let aeMsgRes = await ae_msg_squad_360("ae_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
-                console.log(i, "AE --->", aeMsgRes);
-                ++squad360TotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let aeMsgRes = await ae_msg_squad_360("ae_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.dhanushId, obj.tlName, obj.tlNum, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "AE --->", aeMsgRes);
+                    ++squad360TotalCount;
+                    await delay(500);
+                }
             }
         }
 
         // Tl Logic
-        if (isNaValueFoundHelper(x['TL Name']) && isNaValueFoundHelper(x['TL Mobile No'])) {
-            let messageBodyTL = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
-            // console.log(`${x['TL Mobile No']}`, "\n")
-            // console.log(messageBodyTL)
+        if (isNaValueFoundHelper(x['TL Name']) && x['TL Mobile No']) {
+            const tlNumbers = numbersHelper(x['TL Mobile No']);
+            
+            for (const tlNum of tlNumbers) {
+                let messageBodyTL = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
+                // console.log(`${tlNum}`, "\n")
+                // console.log(messageBodyTL)
 
-            let obj = {
-                "phoneNum": `+91${x['TL Mobile No']}`,
-                "storeName": x['Store Name'],
-                "deviceId": x['Device ID'],
-                "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
-                "storeNum": x['Store Number'],
-                "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${x['TL Mobile No']}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
-            }
+                let obj = {
+                    "phoneNum": `+91${tlNum}`,
+                    "storeName": x['Store Name'],
+                    "deviceId": x['Device ID'],
+                    "dhanushId": x['Dhanush Id'] ? x['Dhanush Id'] : 'NA',
+                    "storeNum": x['Store Number'],
+                    "buttonUrl": `complaint.html?storename=${spaceCheckerHelper(x['Store Name'])}&name=${spaceCheckerHelper(x['TL Name'])}&number=${tlNum}&dhanushid=${x['Dhanush Id']}&branch=${x['Branch']}&deviceid=${x['Device ID']}&type=squad360`
+                }
 
-            if (isMessageSent) {
-                let tlMsgRes = await tl_msg_squad_360("tl_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
-                console.log(i, "TL --->", tlMsgRes);
-                ++squad360TotalCount;
-                await delay(500);
+                if (isMessageSent) {
+                    let tlMsgRes = await tl_msg_squad_360("tl_temp_squad_360", null, obj.phoneNum, obj.storeName, obj.deviceId, obj.dhanushId, obj.storeNum, obj.buttonUrl);
+                    console.log(i, "TL --->", tlMsgRes);
+                    ++squad360TotalCount;
+                    await delay(500);
+                }
             }
         }
     }

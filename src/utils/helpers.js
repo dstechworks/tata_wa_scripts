@@ -35,6 +35,28 @@ function numberHelper(x) {
     return 'NA';
 }
 
+function numbersHelper(x) {
+    // Handles both single number (e.g., "7676363591") and multiple numbers (e.g., "7676363591 / 6369824733")
+    if (!x || x.toString().trim().length === 0) {
+        return [];
+    }
+    
+    const numbers = [];
+    const parts = x.toString().split('/');
+    
+    for (let part of parts) {
+        const cleaned = part.trim().replace(/[.\s]/g, '');
+        if (cleaned.length >= 10) {
+            const number = cleaned.substring(0, 10);
+            if (number.length === 10 && !numbers.includes(number)) {
+                numbers.push(number);
+            }
+        }
+    }
+    
+    return numbers;
+}
+
 function conditionCheckerHelper(x) {
     if (nameHelper(x['AM Name']) && numberHelper(x['AM Mobile No']) && nameHelper(x['Assistant Name']) && numberHelper(x['Assistant Mobile No'])) {
         return true;
@@ -52,4 +74,4 @@ function areAllZonesZero(zone) {
     );
 }
 
-module.exports = { delay, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper, nameHelper, numberHelper, conditionCheckerHelper, areAllZonesZero };
+module.exports = { delay, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper, nameHelper, numberHelper, numbersHelper, conditionCheckerHelper, areAllZonesZero };
