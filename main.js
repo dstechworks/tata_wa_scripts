@@ -26,22 +26,22 @@ function runScript(name, path) {
 }
 
 // Mon–Sat @ 10:00 AM: Run all 5 scripts
-cron.schedule('0 10 * * 1-6', () => {
-    runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 10 AM
-    runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 10 AM
-    runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 10 AM
-    runScript('Squad 360', '~/tata_wa_scripts/src/squad_360/squad_360.js'); // 10 AM
-    // runScript('Magenta Mobility', '~/tata_wa_scripts/src/magenta_mobility/magenta_mobility.js'); // ONLY at 10 AM
-}, { timezone: TIMEZONE });
+// cron.schedule('0 10 * * 1-6', () => {
+//     runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 10 AM
+//     runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 10 AM
+//     runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 10 AM
+//     runScript('Squad 360', '~/tata_wa_scripts/src/squad_360/squad_360.js'); // 10 AM
+//     // runScript('Magenta Mobility', '~/tata_wa_scripts/src/magenta_mobility/magenta_mobility.js'); // ONLY at 10 AM
+// }, { timezone: TIMEZONE });
 
 // Mon–Sat @ 5:00 PM: Run all except Magenta Mobility
-cron.schedule('0 17 * * 1-6', () => {
-    runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 5 PM
-    runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 5 PM
-    runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 5 PM
-    runScript('Squad 360', '~/tata_wa_scripts/src/squad_360/squad_360.js'); // 5 PM
-    // Magenta Mobility skipped at 5 PM
-}, { timezone: TIMEZONE });
+// cron.schedule('0 17 * * 1-6', () => {
+//     runScript('Techworks Tab', '~/tata_wa_scripts/src/techworks_tab/techworks_tab.js'); // 5 PM
+//     runScript('Techworks Backwall', '~/tata_wa_scripts/src/techworks_backwall/techworks_backwall.js'); // 5 PM
+//     runScript('Digi Quad', '~/tata_wa_scripts/src/digi_quad/digi_quad.js'); // 5 PM
+//     runScript('Squad 360', '~/tata_wa_scripts/src/squad_360/squad_360.js'); // 5 PM
+//     // Magenta Mobility skipped at 5 PM
+// }, { timezone: TIMEZONE });
 
 // Daily @ 11:58 AM, 08:00 PM Run MPDU 43 Vertical
 ['58 11 * * *', '0 20 * * *'].forEach(schedule => {
