@@ -18,10 +18,30 @@ echo =============================== >> "%LOG_FILE%"
 echo Started at %date% %time% >> "%LOG_FILE%"
 echo =============================== >> "%LOG_FILE%"
 
-cd /d "%BASE_DIR%"
+cd /d "%BASE_DIR%" || (
+    echo ERROR: Failed to change directory to "%BASE_DIR%" >> "%LOG_FILE%"
+    exit /b 1
+)
 
-"C:\Program Files\nodejs\node.exe" ibc_automation.js >> "%LOG_FILE%" 2>&1
+REM ===== FIND NODE VIA PATH (NVM-compatible) =====
+where node >nul 2>&1
+if errorlevel 1 (
+    echo ERROR: Node.js not found in PATH. NVM may not be initialized. >> "%LOG_FILE%"
+    echo        Try running 'nvm use <version>' manually first. >> "%LOG_FILE%"
+    echo        Current PATH: %PATH% >> "%LOG_FILE%"
+    exit /b 1
+)
+
+REM ===== EXECUTE SCRIPT WITH ERROR HANDLING =====
+node ibc_automation.js >> "%LOG_FILE%" 2>&1
+set EXIT_CODE=%errorlevel%
 
 echo =============================== >> "%LOG_FILE%"
-echo Finished at %date% %time% >> "%LOG_FILE%"
+if %EXIT_CODE% equ 0 (
+    echo Finished successfully at %date% %time% (Exit code: %EXIT_CODE%) >> "%LOG_FILE%"
+) else (
+    echo Finished with errors at %date% %time% (Exit code: %EXIT_CODE%) >> "%LOG_FILE%"
+)
 echo =============================== >> "%LOG_FILE%"
+
+exit /b %EXIT_CODE%
