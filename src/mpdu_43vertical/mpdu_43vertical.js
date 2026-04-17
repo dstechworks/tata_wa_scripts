@@ -411,16 +411,15 @@ async function generateTechworksExcel(apiData, folderPath) {
         const filePath = path.join(folderPath, fileName);
 
         // Create a lookup map from workbookData to match Techworks ID with all device fields
-        // Only include devices with 'Verified & Currently Installed' status (same as used in calculateDeviceCounts)
+        // Includes MPDU ('Verified & Currently Installed') and 43-Vertical ('Verified & Working') devices
         const techworksIdToDeviceMap = {};
-        if (workbookData['All Device'] && workbookData['All Device'].length > 0) {
-            workbookData['All Device'].forEach(device => {
+        const buildDeviceMap = (sheetData, statusFilter) => {
+            if (!sheetData || sheetData.length === 0) return;
+            sheetData.forEach(device => {
                 const techworksId = device['Techworks ID'];
                 const branchCode = device['Branch Code'];
                 const currentStatus = device['Current Status'];
-
-                // Only include devices with 'Verified & Currently Installed' status (same filter as in calculateDeviceCounts)
-                if (techworksId && branchCode && currentStatus === 'Verified & Currently Installed') {
+                if (techworksId && branchCode && currentStatus === statusFilter) {
                     techworksIdToDeviceMap[techworksId] = {
                         branchCode: branchCode,
                         outletName: device['Outlet Name'] || '',
@@ -441,7 +440,9 @@ async function generateTechworksExcel(apiData, folderPath) {
                     };
                 }
             });
-        }
+        };
+        buildDeviceMap(workbookData['All Device'], 'Verified & Currently Installed');
+        buildDeviceMap(workbookData['43 Inch Vertical'], 'Verified & Working');
 
         // Filter API data to only include devices that are in workbookData with correct status
         // This ensures Excel only contains devices that are being counted in logs
@@ -449,11 +450,14 @@ async function generateTechworksExcel(apiData, folderPath) {
             const display = item.display || '';
             const cleanedDisplay = display.replace(/\s*(\(new\)|\t)\s*/gi, '');
 
-            // Check if device exists in workbookData with correct status
             return techworksIdToDeviceMap[display] || techworksIdToDeviceMap[cleanedDisplay] ||
                 (workbookData['All Device'] && workbookData['All Device'].some(device =>
                     (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
                     device['Current Status'] === 'Verified & Currently Installed'
+                )) ||
+                (workbookData['43 Inch Vertical'] && workbookData['43 Inch Vertical'].some(device =>
+                    (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
+                    device['Current Status'] === 'Verified & Working'
                 ));
         });
 
@@ -472,12 +476,17 @@ async function generateTechworksExcel(apiData, folderPath) {
             else if (techworksIdToDeviceMap[cleanedDisplay]) {
                 deviceData = techworksIdToDeviceMap[cleanedDisplay];
             }
-            // Try to find by iterating through workbookData for matches
-            else if (workbookData['All Device'] && workbookData['All Device'].length > 0) {
-                const matchedDevice = workbookData['All Device'].find(device =>
-                    (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
-                    device['Current Status'] === 'Verified & Currently Installed'
-                );
+            // Try to find by iterating through workbookData for matches (MPDU then 43-Vertical)
+            else {
+                const matchedDevice =
+                    (workbookData['All Device'] || []).find(device =>
+                        (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
+                        device['Current Status'] === 'Verified & Currently Installed'
+                    ) ||
+                    (workbookData['43 Inch Vertical'] || []).find(device =>
+                        (device['Techworks ID'] === display || device['Techworks ID'] === cleanedDisplay) &&
+                        device['Current Status'] === 'Verified & Working'
+                    );
                 if (matchedDevice) {
                     deviceData = {
                         branchCode: matchedDevice['Branch Code'] || '',
