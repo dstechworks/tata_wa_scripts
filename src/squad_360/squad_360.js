@@ -207,7 +207,6 @@ const startMessages = async (data) => {
     }
     let DistrictPOCNum = {
         "N": {
-            "Amit Sharma": "9878425927",
             "Malika Arjun Kalika": "8123919411",
             "Sumit Bothra": "9831077603"
         },
@@ -215,7 +214,6 @@ const startMessages = async (data) => {
             "Mr Sudalai Muthu": "9949496708",
             "Vikas": "7483579458",
             "Baker Fen John": "9994810050",
-            "Vikram Khosla": "9831055167"
         },
         "E": {
             "Satyendra Singh": "9915440705",
@@ -225,7 +223,6 @@ const startMessages = async (data) => {
         },
         "W": {
             "Pankaj Swahney": "9958899208",
-            "Vinit Agarwal": "7087685878",
             "Mudit Bagla": "9831055257"
         }
     }

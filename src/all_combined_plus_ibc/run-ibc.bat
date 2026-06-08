@@ -1,7 +1,7 @@
 @echo off
 
 REM ===== SET PATHS =====
-set BASE_DIR=D:\Drive-D\JavaScript-Folder\GITHUB\whatsapp-scripts\tata_wa_scripts\src\all_combined_plus_ibc
+set BASE_DIR=G:\Drive-D\JavaScript-Folder\GITHUB\whatsapp-scripts\tata_wa_scripts\src\all_combined_plus_ibc
 set LOG_DIR=%BASE_DIR%\all-combined-plus-ibc-logs
 
 REM ===== CREATE LOG DIR IF NOT EXISTS =====
