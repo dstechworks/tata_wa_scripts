@@ -200,7 +200,7 @@ async function sendMessage() {
             // "Gaurav Pundlik": "9831149422",
             // "Rishab Agarwal": "9734469759",
             // "Milan Anandan": "9903955267"
-            // "Priyank Maheshwari": "9893585458"
+            // "Priyank Maheshwari": "9893558458",
         }
         let techworksTeamHeadNum = {
             "Hitesh": "8700685675",
