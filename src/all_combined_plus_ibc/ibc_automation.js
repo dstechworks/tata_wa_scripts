@@ -209,19 +209,62 @@ function runYourScript() {
             await delay(5000);
             await page.getByRole('button', { name: 'Apply Date Filter' }).click();
             await delay(5000);
-            console.log('🚀 Triggering download via "Display Activity"...');
-            await page.getByRole('button', { name: 'Display Activity' }).click();
 
-            // === WAIT FOR DOWNLOAD ===
-            const download = await page.waitForEvent('download');
-            const suggestedName = download.suggestedFilename() || 'report.xls';
-
-            // ✅ Generate Kolkata-time-based filename
+            // ✅ Generate Kolkata-time-based filename up front so we can saveAs() the instant we get the download
             const nowKolkata = moment().tz('Asia/Kolkata');
             const formattedName = `IADS_Report_${nowKolkata.format('DD-MM-YYYY-HH-mm A').replace(/ /g, '_')}.xlsx`;
             const finalPath = path.join(targetDir, formattedName);
 
-            await download.saveAs(finalPath);
+            // === DOWNLOAD CAPTURE ===
+            // Listeners must be attached synchronously (not via .then() after waitForEvent('page'))
+            // because the IBC export popup fires 'download' and self-closes almost immediately —
+            // any async gap before the download listener attaches loses the event and truncates the file.
+            let downloadSettle;
+            const downloadPromise = new Promise((resolve, reject) => { downloadSettle = { resolve, reject }; });
+            let downloadCaptured = false;
+
+            const handleDownload = async (dl, source) => {
+                if (downloadCaptured) return;
+                downloadCaptured = true;
+                console.log(`⬇️ DOWNLOAD EVENT (${source}):`, dl.suggestedFilename());
+                try {
+                    // Save immediately, before the originating page/popup can close and truncate the stream
+                    await dl.saveAs(finalPath);
+                    downloadSettle.resolve(dl);
+                } catch (saveErr) {
+                    downloadSettle.reject(saveErr);
+                }
+            };
+
+            page.on('download', (dl) => handleDownload(dl, 'main page'));
+            context.on('page', (newPage) => {
+                console.log('🆕 NEW PAGE opened:', newPage.url());
+                newPage.on('download', (dl) => handleDownload(dl, 'new page'));
+            });
+
+            page.on('response', (response) => {
+                const ct = response.headers()['content-type'] || '';
+                if (ct.includes('spreadsheet') || ct.includes('excel') || ct.includes('octet-stream') || ct.includes('csv')) {
+                    console.log('📥 GENERATE RESPONSE (file-like):', response.status(), ct, response.url());
+                }
+            });
+
+            console.log('🚀 Triggering download via "Display Activity"...');
+            await page.getByRole('button', { name: 'Display Activity' }).click();
+            console.log('🖱️ "Display Activity" clicked, waiting for download...');
+
+            // === WAIT FOR DOWNLOAD ===
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Download did not start within 60s')), 60000);
+            });
+
+            let download;
+            try {
+                download = await Promise.race([downloadPromise, timeoutPromise]);
+            } catch (waitErr) {
+                console.log('❌ No DOWNLOAD EVENT within 60s — the click likely is not triggering a download at all (check GENERATE RESPONSE logs above; if none printed, "Display Activity" click may be failing or targeting the wrong element).');
+                throw waitErr;
+            }
             console.log(`✅ File saved: ${finalPath}`);
 
             // === ⚡ REMOVE FIRST TWO ROWS FROM EXCEL FILE ===
