@@ -387,14 +387,17 @@ function validateBranchTotals(dataStoreArray, branchesToCheck, reportType) {
 // EXCEL GENERATION AND EMAIL FUNCTIONS
 // =================================================================================================
 
-// Email configuration - Update these with your SMTP settings
+// Email configuration - AWS SES SMTP
 const emailConfig = {
-    host: 'smtp.dreamhost.com', // Update with your SMTP host
-    port: 465,
-    secure: true, // true for 465, false for other ports
+    host: 'email-smtp.us-east-1.amazonaws.com',
+    port: 587,
+    secure: false, // STARTTLS
     auth: {
-        user: 'hitesh.kumar@techworks.co.in', // Update with your email
-        pass: '4VqvS&RY*ZFnqaU1' // Update with your app password
+        user: 'AKIA332BPBSDS5Z24S6R',
+        pass: 'BAB+7JN4tCuagD8IcUq99aCLaAwHnNTkv9xSfmOyMjjM'
+    },
+    tls: {
+        rejectUnauthorized: true
     }
 };
 
