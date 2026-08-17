@@ -1,17 +1,12 @@
 const { nationalMsg, districtMsg, am_assistant_msg, ae_msg_squad_360, tl_msg_squad_360 } = require('../utils/whatsappMsgTempUtils');
 const { delay, areAllZonesZero, nameHelper, numberHelper, numbersHelper, conditionCheckerHelper, naValueHelper, isNaValueFoundHelper, spaceCheckerHelper } = require('../utils/helpers');
 const { saveDataToExcel } = require('../utils/saveExcelUtils');
-const { google } = require('googleapis');
 const moment = require('moment-timezone');
 const axios = require('axios');
 const path = require('path');
 
 // Logger Intialize
 const logger = require('./squad_360_logger');
-
-// GOOGLE API VARIABLES
-const spreadsheetId = "1aV_JKLR0nPj1HUaVxKr5TVl8OB-9MzR6NV-TfhYaBoQ";
-let workbookData = {};
 
 let isMessageSent = true;
 let listOfAssistant = [
@@ -98,11 +93,11 @@ async function getAllScreensStatus(token) {
     }
 }
 
-// Function to filter screens by displayStatus and screenType(s) and extract specific fields
-function filterAndFormatScreens(screens, screensStatus, displayStatus, ...screenTypes) {
+// Function to filter screens by displayStatus and screenType and extract specific fields
+function filterAndFormatScreens(screens, screensStatus, displayStatus, screenType) {
     const filteredScreens = screens.filter(screen =>
         screen.displayStatus == displayStatus &&
-        screenTypes.includes(screen.screenType)
+        screen.screenType == screenType
     );
 
     // Create a map of screenId to status for quick lookup
@@ -120,7 +115,6 @@ function filterAndFormatScreens(screens, screensStatus, displayStatus, ...screen
         // Extract only the desired fields in the specified order
         return {
             screenId: screen.screenId,
-            screenType: screen.screenType || '',
             displayStatus: screen.displayStatus,
             isActive: statusMap[screen.screenId] || 'InActive', // Set as 'Active'/'InActive' instead of true/false
             branch: screen.outlet?.branch || '',
@@ -147,7 +141,7 @@ function filterAndFormatScreens(screens, screensStatus, displayStatus, ...screen
     });
 }
 
-const renameAllKeyNames = async (data, squadGoogleSheetData = []) => {
+const renameAllKeyNames = async (data) => {
     return data.map(filterData => {
         const x = {};
 
@@ -156,130 +150,27 @@ const renameAllKeyNames = async (data, squadGoogleSheetData = []) => {
         x['Store Name'] = nameHelper(filterData.name);
         x['Store Number'] = numberHelper(filterData.ownerContactNumber);
         x['Branch'] = naValueHelper(filterData.branch?.trim());
-        x['Catg.'] = filterData.screenType || "backwall";
+        x['Catg.'] = "backwall";
         x['WD Code'] = naValueHelper(filterData.wdCode);
         x['WD Name'] = naValueHelper(filterData.wdName);
         x['Status'] = filterData.isActive; // Add the status field with 'Active'/'InActive' value
+        x['TL Name'] = nameHelper(filterData.teamLeadName);
+        x['TL Mobile No'] = filterData.teamLeadContactNumber; // Store raw value for numbersHelper
+        x['AE Name'] = nameHelper(filterData.areaExecutiveName);
+        x['AE Mobile No'] = filterData.areaExecutiveContactNumber; // Store raw value for numbersHelper
+        x['AM Name'] = nameHelper(filterData.areaManagerName);
+        x['AM Mobile No'] = filterData.areaManagerContactNumber; // Store raw value for numbersHelper
 
-        // Try to match this device against the Squad-360 Google Sheet by Device ID
-        const sheetMatch = squadGoogleSheetData.find(row =>
-            row['Device ID']?.toString().trim().toLowerCase() === filterData.screenId?.toString().trim().toLowerCase()
-        );
+        // Find matching assistant from listOfAssistant
+        const branch = naValueHelper(filterData.branch?.trim());
+        const assistant = listOfAssistant.find(a => a.Branch === branch);
 
-        if (sheetMatch) {
-            // Matched - use TL/AE/AM/Assistant contact data from the Google Sheet
-            x['TL Name'] = nameHelper(sheetMatch['TL Name']);
-            x['TL Mobile No'] = sheetMatch['TL Mobile No']; // Store raw value for numbersHelper
-            x['AE Name'] = nameHelper(sheetMatch['AE Name']);
-            x['AE Mobile No'] = sheetMatch['AE Mobile No']; // Store raw value for numbersHelper
-            x['AM Name'] = nameHelper(sheetMatch['AM Name']);
-            x['AM Mobile No'] = sheetMatch['AM Mobile No']; // Store raw value for numbersHelper
-            x['Assistant Name'] = nameHelper(sheetMatch['Assistant Name']);
-            x['Assistant Mobile No'] = sheetMatch['Assistant Mobile No']; // Store raw value for numbersHelper
-        } else {
-            // Not matched - fall back to the previous logic sourced from the Squad360 API data
-            x['TL Name'] = nameHelper(filterData.teamLeadName);
-            x['TL Mobile No'] = filterData.teamLeadContactNumber; // Store raw value for numbersHelper
-            x['AE Name'] = nameHelper(filterData.areaExecutiveName);
-            x['AE Mobile No'] = filterData.areaExecutiveContactNumber; // Store raw value for numbersHelper
-            x['AM Name'] = nameHelper(filterData.areaManagerName);
-            x['AM Mobile No'] = filterData.areaManagerContactNumber; // Store raw value for numbersHelper
-
-            // Find matching assistant from listOfAssistant
-            const branch = naValueHelper(filterData.branch?.trim());
-            const assistant = listOfAssistant.find(a => a.Branch === branch);
-
-            x['Assistant Name'] = assistant ? nameHelper(assistant['Assistant Name']) : "";
-            x['Assistant Mobile No'] = assistant ? assistant['Assistant Mobile No'] : ""; // Store raw value for numbersHelper
-        }
+        x['Assistant Name'] = assistant ? nameHelper(assistant['Assistant Name']) : "";
+        x['Assistant Mobile No'] = assistant ? assistant['Assistant Mobile No'] : ""; // Store raw value for numbersHelper
 
         return x;
     });
 };
-
-// =================================================================================================
-// Google Sheets data fetching
-// =================================================================================================
-async function getDataFromGoogleSheets(sheetID, reference) {
-    const accessGoogleSheet = async () => {
-        try {
-            // Initialize the authentication client
-            const auth = new google.auth.GoogleAuth({
-                keyFile: path.resolve(__dirname, '../../credentials.json'),
-                scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-            });
-
-            // Get the authenticated client
-            const authClientObject = await auth.getClient();
-
-            // Create the Sheets instance
-            const sheets = google.sheets({ version: 'v4', auth: authClientObject });
-
-            return sheets; // Return the sheets instance
-        } catch (error) {
-            console.error("Error initializing Google Sheets API:", error);
-            throw error;
-        }
-    };
-
-    const getAllWorkbookNames = async (sheets) => {
-        try {
-            // Get workbook names present in the spreadsheet
-            const response = await sheets.spreadsheets.get({
-                spreadsheetId: sheetID,
-            });
-
-            const sheetNames = response.data.sheets.map(sheet => sheet.properties.title);
-            // console.log('\n');
-            // console.log('Sheet Names:', sheetNames);
-
-            return sheetNames; // Return the sheet names
-        } catch (error) {
-            console.error("Error fetching workbook names:", error);
-            throw error;
-        }
-    };
-
-    const getWorkbookWiseData = async (sheets, sheetNames) => {
-        try {
-            for (let i = 0; i < sheetNames.length; i++) {
-                const sheetName = sheetNames[i];
-                // Fetch data for each sheet
-                const response = await sheets.spreadsheets.values.get({
-                    spreadsheetId: sheetID,
-                    range: sheetName,
-                });
-
-                const data = response.data.values || [];
-                // console.log(`Data for ${sheetName}:`, data.length);
-
-                // Change array of array data to array of objects like API response
-                const [headers, ...rows] = data;
-                const result = rows.map(row => Object.fromEntries(headers.map((key, index) => [key, row[index]])));
-
-                workbookData[sheetName] = result;
-                // if (reference == "CubesSheetCall") {
-                //   const folderPath = path.join(__dirname, 'ibc-backwall-daily-files');
-                //   let saveDataToExcelRes = await saveDataToExcel(result, folderPath);
-                // }
-            }
-        } catch (error) {
-            console.error("Error fetching data for sheets:", error);
-            throw error;
-        }
-
-        return true;
-    };
-
-    try {
-        let sheets = await accessGoogleSheet();
-        let sheetNames = await getAllWorkbookNames(sheets);
-        let getWorkbookRes = await getWorkbookWiseData(sheets, sheetNames);
-        return getWorkbookRes;
-    } catch (error) {
-        console.error("Error during Google Sheets data retrieval:", error);
-    }
-}
 
 const startMessages = async (data) => {
     function getAllBranch() {
@@ -546,7 +437,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         // ========== AM Message ========== //
         if (isNaValueFoundHelper(aeData.AM?.['Name']) && aeData.AM?.['Mobile No']) {
             const amNumbers = numbersHelper(aeData.AM['Mobile No']);
-
+            
             for (const amNum of amNumbers) {
                 const messageBodyAM = `SQUAD-360 STATUS\nAE Name: ${aeName}\nTotal Devices: ${aeData['Total Count']}\nActive Devices: ${aeData['Active Count']}\nInactive Devices: ${aeData['InActive Count']}`;
 
@@ -575,7 +466,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         for (const [assistantName, assistantData] of Object.entries(assistants)) {
             if (isNaValueFoundHelper(assistantName) && assistantData?.['Mobile No']) {
                 const assistantNumbers = numbersHelper(assistantData['Mobile No']);
-
+                
                 for (const assistantNum of assistantNumbers) {
                     const messageBodyAssistant = `SQUAD-360 STATUS\nAE Name: ${aeName}\nAssistant: ${assistantName}\nTotal Devices: ${assistantData.Total}\nActive Devices: ${assistantData.Active}\nInactive Devices: ${assistantData.Inactive}`;
 
@@ -618,7 +509,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
             const aeNumbers = numbersHelper(x['AE Mobile No']);
             const tlNumbers = numbersHelper(x['TL Mobile No']);
             const firstTlNum = tlNumbers.length > 0 ? tlNumbers[0] : (numberHelper(x['TL Mobile No']) !== 'NA' ? numberHelper(x['TL Mobile No']) : 'NA');
-
+            
             for (const aeNum of aeNumbers) {
                 let messageBodyAE = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nTL Number: ${firstTlNum}\nStore Number: ${x['Store Number']}`;
                 // console.log(`${aeNum}`, "\n")
@@ -646,7 +537,7 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
         // Tl Logic
         if (isNaValueFoundHelper(x['TL Name']) && x['TL Mobile No']) {
             const tlNumbers = numbersHelper(x['TL Mobile No']);
-
+            
             for (const tlNum of tlNumbers) {
                 let messageBodyTL = `Hi ! SQUAD-360 is not working at the following store\nStore Name: ${x['Store Name']}\nDhanush ID: ${x['Dhanush Id']}\nStore Number: ${x['Store Number']}`;
                 // console.log(`${tlNum}`, "\n")
@@ -683,11 +574,6 @@ West  : ${zone.W.active} (Active) / ${zone.W.inactive} (Inactive)`;
 // Main function to execute the API calls
 async function main() {
     try {
-        // Get base data from Google Sheets
-        await getDataFromGoogleSheets(spreadsheetId, 'BaseSheetCall');
-        const squadGoogleSheetData = workbookData["Squad-360"] || [];
-        console.log('Squad-360 sheet rows:', squadGoogleSheetData.length);
-
         // Get access token
         const token = await getAccessToken();
         console.log('Access token:', token);
@@ -702,16 +588,16 @@ async function main() {
         // console.log('Screens status data retrieved');
 
         // Filter screens with displayStatus="Active" and screenType="backwall" and format data
-        const formattedScreens = filterAndFormatScreens(allScreensData, allScreensStatus, "Active", "backwall", "digi-quads");
-        // console.log('Filtered screens count:', formattedScreens.length);
+        const formattedScreens = filterAndFormatScreens(allScreensData, allScreensStatus, "Active", "backwall");
+        console.log('Filtered screens count:', formattedScreens.length);
 
         // Save the renamed data to Excel
         const folderPath = path.join(__dirname, 'squad-360-daily-files');
         await saveDataToExcel(formattedScreens, folderPath);
 
         // Rename keys for the formatted data
-        const renamedData = await renameAllKeyNames(formattedScreens, squadGoogleSheetData);
-        // console.log('Renamed Data Successfully');
+        const renamedData = await renameAllKeyNames(formattedScreens);
+        console.log('Renamed Data Successfully');
 
         await startMessages(renamedData);
     } catch (error) {
